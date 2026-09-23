@@ -1,0 +1,49 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/feature/browser/utils.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+import 'package:nekoton_webview/nekoton_webview.dart' hide Message;
+
+const _timeLimit = Duration(seconds: 30);
+
+@injectable
+class AddNetworkModel extends ElementaryModel {
+  AddNetworkModel(
+    ErrorHandler errorHandler,
+    this._connectionsStorageService,
+    this._connectionService,
+    this._nekotonRepository,
+  ) : super(errorHandler: errorHandler);
+
+  final ConnectionsStorageService _connectionsStorageService;
+  final ConnectionService _connectionService;
+  final NekotonRepository _nekotonRepository;
+
+  Future<Network?> addNetwork(Connection connection) async {
+    Transport? transport;
+
+    try {
+      _connectionsStorageService.addConnection(connection);
+
+      transport = await _connectionService.createTransportByWorkchain(
+        connection.defaultWorkchain,
+      );
+
+      return await _connectionService
+          .createStrategyByWorkchain(transport, connection.defaultWorkchain)
+          .toNetwork();
+    } finally {
+      await transport?.dispose();
+    }
+  }
+
+  Future<void> changeNetwork(String id) async {
+    _connectionsStorageService.saveCurrentConnectionId(connectionId: id);
+    await _nekotonRepository.currentTransportStream
+        .firstWhere((strategy) => strategy.connectionId == id)
+        .timeout(_timeLimit);
+  }
+
+  void showError(Object data) => handleError(data);
+}

@@ -1,0 +1,60 @@
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+enum SelectAddSeedType { create, import, ledger }
+
+/// Helper function that shows [SelectAddSeedTypeSheet]
+Future<SelectAddSeedType?> showSelectAddSeedTypeSheet(BuildContext context) {
+  return showCommonBottomSheet<SelectAddSeedType>(
+    context: context,
+    title: LocaleKeys.addNewSeedPhrase.tr(),
+    body: (_, __) => const SelectAddSeedTypeSheet(),
+    titleTextStyle: context.themeStyle.textStyles.headingLarge,
+    centerTitle: true,
+  );
+}
+
+/// Widget that allows select type of seed phrase adding
+class SelectAddSeedTypeSheet extends StatelessWidget {
+  const SelectAddSeedTypeSheet({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.themeStyle.colors;
+
+    return ShapedContainerColumn(
+      squircleRadius: DimensRadius.radius24,
+      color: colors.background2,
+      margin: EdgeInsets.zero,
+      mainAxisSize: MainAxisSize.min,
+      separator: const CommonDivider(),
+      children: [
+        CommonListTile(
+          onPressed: () => Navigator.of(context).pop(SelectAddSeedType.create),
+          titleText: LocaleKeys.createNewSeed.tr(),
+          trailing: CommonIconWidget.svg(
+            svg: Assets.images.plus.path,
+            color: colors.content0,
+          ),
+        ),
+        CommonListTile(
+          onPressed: () => Navigator.of(context).pop(SelectAddSeedType.import),
+          titleText: LocaleKeys.importSeed.tr(),
+          trailing: CommonIconWidget.svg(
+            svg: Assets.images.import.path,
+            color: colors.content0,
+          ),
+        ),
+        CommonListTile(
+          onPressed: () => Navigator.of(context).pop(SelectAddSeedType.ledger),
+          titleText: LocaleKeys.importFromLedger.tr(),
+          trailing: CommonIconWidget.svg(
+            svg: Assets.images.ledger.path,
+            color: colors.content0,
+          ),
+        ),
+      ],
+    );
+  }
+}

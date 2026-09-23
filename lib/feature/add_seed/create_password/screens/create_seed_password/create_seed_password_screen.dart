@@ -1,0 +1,56 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/add_seed/create_password/model/password_status.dart';
+import 'package:app/feature/add_seed/create_password/screens/create_seed_password/create_seed_password_screen_wm.dart';
+import 'package:app/feature/add_seed/create_password/view/create_seed_password_view.dart';
+import 'package:app/utils/focus_utils.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+/// {@template create_seed_password_onboarding_page}
+/// Entry point to create seed password from onboarding.
+/// {@endtemplate}
+class CreateSeedPasswordScreen
+    extends
+        InjectedElementaryParametrizedWidget<
+          CreateSeedPasswordScreenWidgetModel,
+          CreateSeedPasswordWmParams
+        > {
+  CreateSeedPasswordScreen({
+    required SecureString? phrase,
+    required MnemonicType? mnemonicType,
+    super.key,
+  }) : super(
+         wmFactoryParam: CreateSeedPasswordWmParams(
+           phrase: phrase,
+           mnemonicType: mnemonicType,
+         ),
+       );
+
+  @override
+  Widget build(CreateSeedPasswordScreenWidgetModel wm) {
+    return GestureDetector(
+      onTap: resetFocus,
+      child: CustomMediaQuery(
+        viewInsetsBottomAddon: -DimensSize.d16,
+        child: DoubleSourceBuilder<bool, PasswordStatus>(
+          firstSource: wm.loadState,
+          secondSource: wm.passwordStatusState,
+          builder: (_, isLoading, passwordStatus) {
+            return CreateSeedPasswordView(
+              backgroundColor: wm.themeStyle.colors.background0,
+              needBiometryIfPossible: true,
+              passwordController: wm.passwordController,
+              confirmController: wm.confirmController,
+              onPressedNext: wm.onPressedNext,
+              isLoading: isLoading ?? false,
+              passwordStatus: passwordStatus,
+            );
+          },
+        ),
+      ),
+    );
+  }
+}

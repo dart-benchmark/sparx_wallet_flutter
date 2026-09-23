@@ -1,0 +1,240 @@
+import 'dart:async';
+
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/profile/widgets/enter_password/data/data.dart';
+import 'package:app/feature/profile/widgets/enter_password/enter_password_wm.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/widgets/protected_content.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+typedef GetLedgerAuthInput = FutureOr<SignInputAuthLedger> Function();
+
+/// This is a widget that allows user to enter password for any action or
+/// user biometry if available.
+///
+/// Also widget stores/get password from biometry storage.
+///
+/// This widget can be displayed in any sheet.
+///
+/// !!! This widget must be an entry point for entering any password, because
+/// this widget contains internal logic for checking biometry.
+class EnterPasswordWidget
+    extends
+        InjectedElementaryParametrizedWidget<
+          EnterPasswordWidgetModel,
+          EnterPasswordWmParams
+        > {
+  EnterPasswordWidget({
+    required PublicKey publicKey,
+    required ValueChanged<String> onPasswordEntered,
+    ValueChanged<String?>? onChangedText,
+    ListenableState<bool>? activeExportState,
+    String? title,
+    bool isLoading = false,
+    bool isDisabled = false,
+    bool isAutofocus = true,
+    super.key,
+  }) : super(
+         wmFactoryParam: EnterPasswordWmParams(
+           publicKey: publicKey,
+           title: title,
+           isLoading: isLoading,
+           isDisabled: isDisabled,
+           isAutofocus: isAutofocus,
+           getLedgerAuthInput: null,
+           onConfirmed: null,
+           onChangedText: onChangedText,
+           onPasswordEntered: onPasswordEntered,
+           activeExportState: activeExportState,
+         ),
+       );
+
+  EnterPasswordWidget.auth({
+    required PublicKey publicKey,
+    required ValueChanged<SignInputAuth> onConfirmed,
+    GetLedgerAuthInput? getLedgerAuthInput,
+    String? title,
+    bool isLoading = false,
+    bool isDisabled = false,
+    bool isAutofocus = true,
+    super.key,
+  }) : super(
+         wmFactoryParam: EnterPasswordWmParams(
+           publicKey: publicKey,
+           title: title,
+           isLoading: isLoading,
+           isDisabled: isDisabled,
+           isAutofocus: isAutofocus,
+           getLedgerAuthInput: getLedgerAuthInput,
+           onConfirmed: onConfirmed,
+           onPasswordEntered: null,
+         ),
+       );
+
+  @override
+  Widget build(EnterPasswordWidgetModel wm) {
+    return DoubleValueListenableBuilder(
+      firstValue: wm.enterPasswordState,
+      secondValue: wm.props,
+      builder: (_, state, props) {
+        if (state == null) {
+          return const SizedBox.shrink();
+        }
+
+        return switch (state) {
+          EnterPasswordStateBiometry(:final isFace) => _Biometry(
+            title: props.title,
+            isDisabled: props.isDisabled,
+            isLoading: props.isLoading,
+            isFace: isFace,
+            onSubmit: wm.onBiometry,
+          ),
+          EnterPasswordStatePassword() => StateNotifierBuilder(
+            listenableState: wm.isPasswordLockedState,
+            builder: (_, isLocked) => ProtectedContent(
+              child: _Password(
+                title: props.title,
+                isDisabled: props.isDisabled,
+                isLocked: isLocked ?? false,
+                isAutofocus: props.isAutofocus,
+                isLoading: props.isLoading,
+                activeExportState: wm.activeExportState,
+                controller: wm.passwordController,
+                onChangedText: wm.onChangedText,
+                onSubmit: wm.onPassword,
+              ),
+            ),
+          ),
+          EnterPasswordStateLedger() => _Ledger(
+            title: props.title,
+            isDisabled: props.isDisabled,
+            isLoading: props.isLoading,
+            onSubmit: wm.onLedger,
+          ),
+        };
+      },
+    );
+  }
+}
+
+class _Ledger extends StatelessWidget {
+  const _Ledger({
+    required this.title,
+    required this.isDisabled,
+    required this.isLoading,
+    required this.onSubmit,
+  });
+
+  final String? title;
+  final bool isDisabled;
+  final bool isLoading;
+  final VoidCallback onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return AccentButton(
+      buttonShape: ButtonShape.pill,
+      title: title ?? LocaleKeys.submitOnLedger.tr(),
+      isLoading: isLoading,
+      icon: LucideIcons.bluetooth,
+      onPressed: isDisabled ? null : onSubmit,
+    );
+  }
+}
+
+class _Biometry extends StatelessWidget {
+  const _Biometry({
+    required this.title,
+    required this.isDisabled,
+    required this.isLoading,
+    required this.isFace,
+    required this.onSubmit,
+  });
+
+  final String? title;
+  final bool isDisabled;
+  final bool isLoading;
+  final bool isFace;
+  final ValueChanged<bool> onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return AccentButton(
+      buttonShape: ButtonShape.pill,
+      title: title ?? LocaleKeys.submitWord.tr(),
+      isLoading: isLoading,
+      icon: isFace ? LucideIcons.scanFace : LucideIcons.fingerprintPattern,
+      onPressed: isDisabled ? null : () => onSubmit(isFace),
+    );
+  }
+}
+
+class _Password extends StatelessWidget {
+  const _Password({
+    required this.title,
+    required this.isDisabled,
+    required this.isLocked,
+    required this.isAutofocus,
+    required this.isLoading,
+    required this.activeExportState,
+    required this.controller,
+    required this.onChangedText,
+    required this.onSubmit,
+  });
+
+  final String? title;
+  final bool isDisabled;
+  final bool isLocked;
+  final bool isAutofocus;
+  final bool isLoading;
+  final ListenableState<bool>? activeExportState;
+  final TextEditingController controller;
+  final ValueChanged<String?>? onChangedText;
+  final ValueChanged<String> onSubmit;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SecureTextField(
+          hintText: LocaleKeys.password.tr(),
+          textEditingController: controller,
+          isAutofocus: isAutofocus && !isDisabled,
+          isEnabled: !isDisabled,
+          onChanged: onChangedText,
+          onSubmit: isDisabled ? null : (_) => onSubmit(controller.text),
+        ),
+        const SizedBox(height: DimensSize.d24),
+        if (activeExportState != null)
+          StateNotifierBuilder<bool>(
+            listenableState: activeExportState!,
+            builder: (_, bool? isActive) {
+              isActive ??= false;
+              return AccentButton(
+                buttonShape: ButtonShape.pill,
+                title: title ?? LocaleKeys.submitWord.tr(),
+                isLoading: isLoading,
+                icon: isLocked ? LucideIcons.lock : null,
+                onPressed: isDisabled || !isActive
+                    ? null
+                    : () => onSubmit(controller.text),
+              );
+            },
+          )
+        else
+          AccentButton(
+            buttonShape: ButtonShape.pill,
+            title: title ?? LocaleKeys.submitWord.tr(),
+            isLoading: isLoading,
+            icon: isLocked ? LucideIcons.lock : null,
+            onPressed: isDisabled ? null : () => onSubmit(controller.text),
+          ),
+      ],
+    );
+  }
+}

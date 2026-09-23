@@ -1,0 +1,30 @@
+import 'dart:async';
+
+import 'package:app/app/router/router.dart';
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/profile/widgets/switch_to_seed_sheet/switch_to_seed_model.dart';
+import 'package:app/feature/profile/widgets/switch_to_seed_sheet/switch_to_seed_widget.dart';
+import 'package:app/feature/wallet/route.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+@injectable
+class SwitchToSeedWidgetModel
+    extends
+        CustomWidgetModelParametrized<
+          SwitchToSeedWidget,
+          SwitchToSeedModel,
+          PublicKey
+        > {
+  SwitchToSeedWidgetModel(super.model);
+
+  ThemeStyle get theme => context.themeStyle;
+
+  Future<void> onSwitch() async {
+    await model.changeCurrentAccount(wmParams.value);
+    await contextSafe?.compassBack(const WalletRouteData());
+  }
+
+  void onContinue() => contextSafe?.compassBack();
+}

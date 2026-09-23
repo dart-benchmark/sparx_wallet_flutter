@@ -1,0 +1,129 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/wallet/widgets/account_settings/account_settings_wm.dart';
+import 'package:app/feature/wallet/widgets/account_settings/info_card.dart';
+import 'package:app/feature/wallet/widgets/account_settings/widgets/account_settings_button.dart';
+import 'package:app/feature/wallet/widgets/account_settings/widgets/change_color_button/account_settings_change_color_button.dart';
+import 'package:app/generated/generated.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class AccountSettingsWidget
+    extends
+        InjectedElementaryParametrizedWidget<
+          AccountSettingsWidgetModel,
+          KeyAccount
+        > {
+  const AccountSettingsWidget({
+    required this.account,
+    required this.scrollController,
+    super.key,
+  }) : super(wmFactoryParam: account);
+
+  final KeyAccount account;
+  final ScrollController scrollController;
+
+  @override
+  Widget build(AccountSettingsWidgetModel wm) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AccountSettingsInfoCard(account: account),
+        const SizedBox(height: DimensSize.d16),
+        DoubleSourceBuilder(
+          firstSource: wm.displayAccountsState,
+          secondSource: wm.custodiansState,
+          builder: (_, displayList, custodians) {
+            return _ButtonsCard(
+              address: account.address.address,
+              custodians: custodians,
+              onCustodiansSettings: wm.onCustodiansSettings,
+              onViewInExplorer: wm.onViewInExplorer,
+              onRename: wm.onRename,
+              onVerify: (wm.seedKey?.isLedger ?? false) ? wm.onVerify : null,
+              onHideAccount: (displayList?.length ?? 0) > 1
+                  ? wm.onHideAccount
+                  : null,
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _ButtonsCard extends StatelessWidget {
+  const _ButtonsCard({
+    required this.address,
+    required this.custodians,
+    required this.onCustodiansSettings,
+    required this.onViewInExplorer,
+    required this.onRename,
+    required this.onVerify,
+    required this.onHideAccount,
+  });
+
+  final String address;
+  final List<PublicKey>? custodians;
+  final VoidCallback onCustodiansSettings;
+  final VoidCallback onViewInExplorer;
+  final VoidCallback onRename;
+  final VoidCallback? onVerify;
+  final VoidCallback? onHideAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return PrimaryCard(
+      color: theme.colors.background2,
+      borderRadius: BorderRadius.circular(DimensRadius.radius16),
+      padding: EdgeInsets.zero,
+      child: SeparatedColumn(
+        mainAxisSize: MainAxisSize.min,
+        separator: Divider(
+          height: DimensStroke.small,
+          thickness: DimensStroke.small,
+          color: theme.colors.borderAlpha,
+        ),
+        children: [
+          if ((custodians?.length ?? 0) > 1)
+            AccountSettingsButton(
+              label: LocaleKeys.custodiansWord.tr(),
+              icon: LucideIcons.userRound,
+              onTap: onCustodiansSettings,
+            ),
+          AccountSettingsButton(
+            label: LocaleKeys.changeAccountName.tr(),
+            icon: LucideIcons.pencilLine,
+            onTap: onRename,
+          ),
+          if (onVerify != null)
+            AccountSettingsButton(
+              label: LocaleKeys.verifyOnLedger.tr(),
+              iconWidget: Assets.images.ledger.svg(
+                width: DimensSize.d20,
+                height: DimensSize.d20,
+              ),
+              onTap: onVerify!,
+            ),
+          AccountSettingsChangeColorButton(address: address),
+          AccountSettingsButton(
+            label: LocaleKeys.seeInExplorer.tr(),
+            icon: LucideIcons.globe,
+            onTap: onViewInExplorer,
+          ),
+          if (onHideAccount != null)
+            AccountSettingsButton(
+              label: LocaleKeys.hideAccount.tr(),
+              icon: LucideIcons.eyeOff,
+              color: theme.colors.contentNegative,
+              onTap: onHideAccount!,
+            ),
+        ],
+      ),
+    );
+  }
+}

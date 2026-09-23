@@ -1,0 +1,236 @@
+import 'package:app/generated/locale_keys.g.dart';
+import 'package:easy_localization/easy_localization.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class ProfileView extends StatelessWidget {
+  const ProfileView({
+    required this.appVersion,
+    required this.isBiometryAvailable,
+    required this.isBiometryEnabled,
+    required this.seed,
+    required this.onManageSeeds,
+    required this.onExportSeed,
+    required this.onContactSupport,
+    required this.onChangeLanguage,
+    required this.onFAQ,
+    required this.onLegal,
+    required this.onLogout,
+    required this.onBiomentryChanged,
+    required this.onManageDapps,
+    this.isDarkThemeEnabled = false,
+    super.key,
+  });
+
+  final ListenableState<bool> isBiometryAvailable;
+  final ListenableState<bool> isBiometryEnabled;
+  final ListenableState<Seed?> seed;
+  final String appVersion;
+  final bool isDarkThemeEnabled;
+  final VoidCallback onManageSeeds;
+  final VoidCallback onExportSeed;
+  final VoidCallback onContactSupport;
+  final VoidCallback onChangeLanguage;
+  final VoidCallback onFAQ;
+  final VoidCallback onLegal;
+  final VoidCallback onLogout;
+  final VoidCallback onManageDapps;
+  final ValueChanged<bool> onBiomentryChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: DimensSize.d16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(height: MediaQuery.paddingOf(context).top),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: DimensSize.d20),
+              child: Text(
+                LocaleKeys.settings.tr(),
+                style: theme.textStyles.headingLarge,
+                textAlign: TextAlign.center,
+              ),
+            ),
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _Container(
+                  children: [
+                    _Item(
+                      title: LocaleKeys.manageSeedsAndAccounts.tr(),
+                      icon: LucideIcons.keyRound,
+                      onPressed: onManageSeeds,
+                    ),
+                    _Item(
+                      title: LocaleKeys.connectedDappsTitle.tr(),
+                      subtitle: LocaleKeys.connectedDappsSubtitle.tr(),
+                      icon: LucideIcons.plus,
+                      onPressed: onManageDapps,
+                    ),
+                    _Item(
+                      title: LocaleKeys.languageWord.tr(),
+                      subtitle: LocaleKeys.chooseLanguage.tr(),
+                      icon: LucideIcons.globe,
+                      onPressed: onChangeLanguage,
+                    ),
+                  ],
+                ),
+                DoubleSourceBuilder(
+                  firstSource: isBiometryAvailable,
+                  secondSource: seed,
+                  builder: (_, available, seed) {
+                    if ((seed == null || seed.masterKey.isLedger) &&
+                        (available == null || !available)) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: DimensSize.d24),
+                      child: _Container(
+                        children: [
+                          if (seed != null && !seed.masterKey.isLedger)
+                            _Item(
+                              title: LocaleKeys.exportSeedPhrase.tr(),
+                              icon: LucideIcons.databaseBackup,
+                              onPressed: onExportSeed,
+                            ),
+                          if (available ?? false)
+                            StateNotifierBuilder(
+                              listenableState: isBiometryEnabled,
+                              builder: (_, enabled) => _Item(
+                                title: LocaleKeys.biometryWord.tr(),
+                                icon: LucideIcons.fingerprintPattern,
+                                trailing: Switch(
+                                  value: enabled ?? false,
+                                  onChanged: onBiomentryChanged,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: DimensSize.d24),
+                  child: _Container(
+                    children: [
+                      _Item(
+                        title: LocaleKeys.faq.tr(),
+                        icon: LucideIcons.messageCircleQuestionMark,
+                        onPressed: onFAQ,
+                      ),
+                      _Item(
+                        title: LocaleKeys.contactSupport.tr(),
+                        icon: LucideIcons.messagesSquare,
+                        onPressed: onContactSupport,
+                      ),
+                      _Item(
+                        title: LocaleKeys.legal.tr(),
+                        icon: LucideIcons.link,
+                        onPressed: onLegal,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: DimensSize.d24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    spacing: DimensSize.d8,
+                    children: [
+                      DestructiveButton(
+                        buttonShape: ButtonShape.pill,
+                        title: LocaleKeys.logOut.tr(),
+                        icon: LucideIcons.logOut,
+                        onPressed: onLogout,
+                      ),
+                      Text(
+                        '${LocaleKeys.versionWord.tr()} $appVersion',
+                        textAlign: TextAlign.center,
+                        style: theme.textStyles.labelXSmall.copyWith(
+                          color: theme.colors.content3,
+                        ),
+                      ),
+                      const SizedBox(height: DimensSize.d4),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Item extends StatelessWidget {
+  const _Item({
+    required this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onPressed,
+  });
+
+  final IconData icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return CommonListTile(
+      padding: EdgeInsets.zero,
+      height: subtitle == null ? DimensSize.d40 : null,
+      titleText: title,
+      titleTextStyle: theme.textStyles.button,
+      subtitleText: subtitle,
+      subtitleTextStyle: theme.textStyles.labelXSmall.copyWith(
+        color: theme.colors.textSecondary,
+      ),
+      leading: CommonBackgroundedIconWidget.icon(
+        icon: icon,
+        iconColor: theme.colors.content0,
+        backgroundColor: theme.colors.backgroundAlpha,
+      ),
+      trailing:
+          trailing ??
+          const Icon(LucideIcons.chevronRight, size: DimensSize.d20),
+      onPressed: onPressed,
+    );
+  }
+}
+
+class _Container extends StatelessWidget {
+  const _Container({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return ShapedContainerColumn(
+      color: theme.colors.background1,
+      separator: const CommonDivider(
+        margin: EdgeInsets.symmetric(vertical: DimensSize.d16),
+      ),
+      padding: const EdgeInsets.all(DimensSize.d16),
+      margin: EdgeInsets.zero,
+      children: children,
+    );
+  }
+}

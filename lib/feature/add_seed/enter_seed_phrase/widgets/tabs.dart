@@ -1,0 +1,76 @@
+import 'package:app/generated/generated.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class EnterSeedPhraseTabs extends StatelessWidget {
+  const EnterSeedPhraseTabs({
+    required this.allowedValues,
+    required this.currentValue,
+    required this.displayPasteButtonState,
+    required this.changeTab,
+    required this.pastePhrase,
+    required this.clearFields,
+    super.key,
+  });
+
+  final List<int> allowedValues;
+  final int currentValue;
+  final ListenableState<bool> displayPasteButtonState;
+  final ValueChanged<int> changeTab;
+  final VoidCallback pastePhrase;
+  final VoidCallback clearFields;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: DimensSize.d16),
+      child: Row(
+        children: [
+          Flexible(
+            child: Row(
+              children: [
+                Flexible(
+                  child: SwitcherSegmentControls<int>(
+                    currentValue: currentValue,
+                    values: [
+                      for (final value in allowedValues)
+                        PrimarySegmentControl(
+                          state: SegmentControlState.normal,
+                          title: LocaleKeys.wordsCount.plural(value),
+                          value: value,
+                          size: SegmentControlSize.medium,
+                        ),
+                    ],
+                    onTabChanged: changeTab,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: DimensSize.d124),
+            child: StateNotifierBuilder(
+              listenableState: displayPasteButtonState,
+              builder: (_, bool? isDisplay) {
+                isDisplay ??= true;
+                return GhostButton(
+                  buttonShape: ButtonShape.pill,
+                  buttonSize: ButtonSize.small,
+                  onPressed: isDisplay ? pastePhrase : clearFields,
+                  title: isDisplay
+                      ? LocaleKeys.pasteAll.tr()
+                      : LocaleKeys.clearAll.tr(),
+                  icon: isDisplay
+                      ? LucideIcons.arrowDownToDot
+                      : LucideIcons.trash2,
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

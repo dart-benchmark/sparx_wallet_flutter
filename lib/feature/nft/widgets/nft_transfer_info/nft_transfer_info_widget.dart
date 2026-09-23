@@ -1,0 +1,298 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/nft/nft.dart';
+import 'package:app/feature/wallet/wallet.dart';
+import 'package:app/feature/wallet/widgets/account_transactions_tab/detail/details.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/utils/utils.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+const _indicator = ProgressIndicatorWidget(size: DimensSize.d20);
+
+class NftTransferInfoWidget
+    extends InjectedElementaryWidget<NftTransferInfoWidgetModel> {
+  const NftTransferInfoWidget({
+    required this.amount,
+    required this.recipient,
+    required this.itemState,
+    required this.collectionState,
+    required this.attachedAmountState,
+    required this.feesState,
+    required this.feeErrorState,
+    super.key,
+  });
+
+  final BigInt? amount;
+  final Address recipient;
+  final ListenableState<NftItem> itemState;
+  final ListenableState<NftCollection> collectionState;
+  final ListenableState<BigInt> feesState;
+  final ListenableState<String> feeErrorState;
+  final ListenableState<BigInt> attachedAmountState;
+
+  @override
+  Widget build(NftTransferInfoWidgetModel wm) {
+    final theme = wm.theme;
+    final labelSmallContent3 = theme.textStyles.labelSmall.copyWith(
+      color: theme.colors.content3,
+    );
+
+    return PrimaryCard(
+      padding: const EdgeInsets.all(DimensSize.d16),
+      borderRadius: BorderRadius.circular(DimensRadius.radius16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DoubleSourceBuilder(
+            firstSource: itemState,
+            secondSource: collectionState,
+            builder: (_, item, collection) {
+              if (item == null || collection == null) {
+                return const ProgressIndicatorWidget(size: DimensSize.d44);
+              }
+
+              return _Item(item: item, collection: collection);
+            },
+          ),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: DimensSize.d16),
+            child: CommonDivider(),
+          ),
+          if (amount != null)
+            _InfoRow(
+              label: LocaleKeys.amountWord.tr(),
+              child: Text(
+                amount.toString(),
+                style: theme.textStyles.labelSmall,
+              ),
+            ),
+          StateNotifierBuilder(
+            listenableState: attachedAmountState,
+            builder: (_, attachedAmount) {
+              final amount = attachedAmount?.let(
+                (attachedAmount) => Money.fromBigIntWithCurrency(
+                  attachedAmount,
+                  wm.nativeCurrency,
+                ),
+              );
+
+              return _InfoRow(
+                margin: const EdgeInsets.only(top: DimensSize.d16),
+                label: LocaleKeys.attachedAmount.tr(),
+                child: SeparatedColumn(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    amount?.let(
+                          (value) => AmountWidget.fromMoney(
+                            amount: value,
+                            icon: TonWalletIconWidget(
+                              path: wm.nativeTokenIcon,
+                              size: DimensSize.d20,
+                            ),
+                            includeSymbol: false,
+                          ),
+                        ) ??
+                        _indicator,
+                    StateNotifierBuilder(
+                      listenableState: wm.nativeUSDPriceState,
+                      builder: (_, nativeUSDPrice) {
+                        if (nativeUSDPrice == null || amount == null) {
+                          return const SizedBox.shrink();
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(top: DimensSize.d4),
+                          child: AmountWidget.dollars(
+                            amount: amount.exchangeToUSD(nativeUSDPrice),
+                            style: theme.textStyles.labelXSmall.copyWith(
+                              color: theme.colors.content3,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: DimensSize.d16),
+            child: SeparatedColumn(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                DoubleSourceBuilder(
+                  firstSource: feesState,
+                  secondSource: wm.nativeUSDPriceState,
+                  builder: (_, fees, nativeUSDPrice) {
+                    final amount = fees?.let(
+                      (fees) =>
+                          Money.fromBigIntWithCurrency(fees, wm.nativeCurrency),
+                    );
+
+                    return WalletTransactionDetailsItem(
+                      title: LocaleKeys.networkFee.tr(),
+                      valueWidget:
+                          amount?.let(
+                            (amount) => AmountWidget.fromMoney(
+                              amount: amount,
+                              sign: '~ ',
+                              includeSymbol: false,
+                            ),
+                          ) ??
+                          _indicator,
+                      iconPath: wm.nativeTokenIcon,
+                      convertedValueWidget:
+                          nativeUSDPrice != null && amount != null
+                          ? AmountWidget.dollars(
+                              amount: amount.exchangeToUSD(nativeUSDPrice, 5),
+                              style: theme.textStyles.labelXSmall.copyWith(
+                                color: theme.colors.content3,
+                              ),
+                            )
+                          : null,
+                    );
+                  },
+                ),
+                StateNotifierBuilder(
+                  listenableState: feeErrorState,
+                  builder: (_, feeError) {
+                    if (feeError == null) return const SizedBox.shrink();
+
+                    return Padding(
+                      padding: const EdgeInsets.only(top: DimensSize.d4),
+                      child: Text(
+                        feeError,
+                        style: theme.textStyles.labelSmall.copyWith(
+                          color: theme.colors.negative,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: DimensSize.d16),
+            child: SeparatedColumn(
+              spacing: DimensSize.d2,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(LocaleKeys.recipientWord.tr(), style: labelSmallContent3),
+                Text(recipient.address, style: theme.textStyles.labelSmall),
+              ],
+            ),
+          ),
+          const SizedBox(height: DimensSize.d16),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            spacing: DimensSize.d8,
+            children: [
+              const Icon(
+                LucideIcons.octagonAlert,
+                size: DimensSize.d20,
+                color: ColorsRes.p75,
+              ),
+              Expanded(
+                child: Text(
+                  LocaleKeys.nftAttachedAmountNotification.tr(),
+                  style: theme.textStyles.paragraphSmall.copyWith(
+                    color: ColorsRes.p75,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.label,
+    required this.child,
+    this.margin = EdgeInsets.zero,
+  });
+
+  final EdgeInsetsGeometry margin;
+  final String label;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return Padding(
+      padding: margin,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        spacing: DimensSize.d8,
+        children: [
+          Text(
+            label,
+            style: theme.textStyles.labelSmall.copyWith(
+              color: theme.colors.content3,
+            ),
+          ),
+          Flexible(child: child),
+        ],
+      ),
+    );
+  }
+}
+
+class _Item extends StatelessWidget {
+  const _Item({required this.item, required this.collection});
+
+  final NftItem item;
+  final NftCollection collection;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return Row(
+      spacing: DimensSize.d8,
+      children: [
+        SizedBox(
+          width: DimensSize.d40,
+          height: DimensSize.d40,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(DimensRadius.radius20),
+            child: NftImage(imageUrl: item.nft.previewUrl),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            spacing: DimensSize.d4,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.nft.name ?? LocaleKeys.unknown.tr(),
+                style: theme.textStyles.labelMedium,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                maxLines: 1,
+              ),
+              Text(
+                collection.name ?? LocaleKeys.unknown.tr(),
+                style: theme.textStyles.labelXSmall.copyWith(
+                  color: theme.colors.content3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}

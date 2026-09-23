@@ -1,0 +1,72 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+before_all do
+  if is_ci
+    update_fastlane
+  end
+end
+
+default_platform(:android)
+
+platform :android do
+  desc "Deploy a new build to the Google Play Internal channel"
+  lane :deploy_google_play_internal do
+    upload_to_play_store(
+      track: "internal",
+      aab: "../build/app/outputs/bundle/productionRelease/app-production-release.aab",
+      skip_upload_metadata: true,
+      skip_upload_changelogs: false,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      changes_not_sent_for_review: true
+    )
+  end
+
+  desc "Deploy a new build to the FAD"
+  lane :deploy_fad do |options|
+
+    flavor = options[:flavor] || "production"
+    build_mode = options[:build_mode] || "release"
+    
+    # Determine APK name based on build mode
+    if build_mode == "debug"
+      apk_name = "app-#{flavor}-debug.apk"
+      UI.important("Using debug APK: #{apk_name}")
+    else
+      apk_name = "app-#{flavor}-release.apk"
+      UI.important("Using release APK: #{apk_name}")
+    end
+
+    # Check if the APK exists
+    apk_path = "../build/app/outputs/flutter-apk/#{apk_name}"
+    UI.important("Looking for APK at: #{apk_path}")
+    
+    if File.exist?(apk_path)
+      UI.success("APK found at: #{apk_path}")
+    else
+      UI.error("APK not found at: #{apk_path}")
+      all_files = Dir.glob("../build/app/outputs/flutter-apk/*")
+      UI.important("Available files in directory:")
+      all_files.each { |file| UI.important("  - #{file}") }
+    end
+
+    firebase_app_distribution(
+      app: "1:1017783238389:android:de95e7bcfdb82f8f2e4fbc",
+      groups: "qa",
+      android_artifact_type: "APK",
+      android_artifact_path: apk_path,
+      service_credentials_file: "../fastlane/FirebaseADKey.json",
+      release_notes_file:  "../fastlane/changelog.txt",
+    )
+  end
+end

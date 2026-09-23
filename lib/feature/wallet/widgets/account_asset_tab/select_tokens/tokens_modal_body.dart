@@ -1,0 +1,131 @@
+// ignore_for_file: inference_failure_on_function_return_type
+import 'package:app/feature/wallet/widgets/account_asset_tab/select_tokens/token_data_element.dart';
+import 'package:app/feature/wallet/widgets/account_asset_tab/token_wallet_asset/token_wallet_icon.dart';
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class TokensModalBody extends StatelessWidget {
+  const TokensModalBody({
+    required this.assets,
+    required this.onChecked,
+    required this.isAllSelected,
+    required this.onClickAll,
+    required this.isLoading,
+    required this.onClickImport,
+    super.key,
+  });
+
+  final List<TokenDataElement> assets;
+  final Function(TokenDataElement) onChecked;
+  final VoidCallback onClickAll;
+  final bool isAllSelected;
+  final bool isLoading;
+  final VoidCallback onClickImport;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (!isLoading)
+          GestureDetector(
+            onTap: onClickAll,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                isAllSelected
+                    ? LocaleKeys.hideAll.tr()
+                    : LocaleKeys.selectAll.tr(),
+                style: theme.textStyles.labelSmall,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ),
+        const SizedBox(height: DimensSize.d8),
+        SeparatedColumn(
+          mainAxisSize: MainAxisSize.min,
+          spacing: DimensSize.d12,
+          children: assets
+              .map(
+                (value) =>
+                    _TokenItem(tokenDataElement: value, onChecked: onChecked),
+              )
+              .toList(),
+        ),
+        if (isLoading)
+          const Padding(
+            padding: EdgeInsets.only(top: DimensSize.d16),
+            child: ProgressIndicatorWidget(size: DimensSize.d40),
+          ),
+        const SizedBox(height: DimensSize.d24),
+      ],
+    );
+  }
+}
+
+class _TokenItem extends StatelessWidget {
+  const _TokenItem({required this.tokenDataElement, required this.onChecked});
+
+  final TokenDataElement tokenDataElement;
+  final Function(TokenDataElement) onChecked;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return SeparatedRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(right: DimensSize.d4),
+          child: TokenWalletIconWidget(
+            logoURI: tokenDataElement.asset.logoURI,
+            address: tokenDataElement.asset.address,
+            version: tokenDataElement.asset.version,
+          ),
+        ),
+        Expanded(
+          child: SeparatedColumn(
+            spacing: DimensSize.d4,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (tokenDataElement.value != null)
+                AmountWidget.fromMoney(
+                  amount: tokenDataElement.value!,
+                  includeSymbol: false,
+                  style: theme.textStyles.labelSmall,
+                ),
+              Text(
+                tokenDataElement.asset.name,
+                style: theme.textStyles.labelXSmall.copyWith(
+                  color: theme.colors.content3,
+                ),
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                maxLines: 1,
+              ),
+            ],
+          ),
+        ),
+        InkWell(
+          splashColor: Colors.transparent,
+          onTap: () => onChecked(
+            tokenDataElement.copyWith(isSelected: !tokenDataElement.isSelected),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(DimensSize.d10),
+            child: CommonCheckboxInput(
+              checked: tokenDataElement.isSelected,
+              onChanged: (v) {
+                onChecked(tokenDataElement.copyWith(isSelected: v));
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}

@@ -1,0 +1,75 @@
+# Sample workflow for building and deploying a Jekyll site to GitHub Pages
+name: Deploy storybook to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  read_version:
+    runs-on: ubuntu-latest
+    outputs:
+      flutter_version: ${{ steps.read.outputs.flutter_version }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read flutter version
+        id: read
+        run: echo "flutter_version=$(cat .github/configs/flutter_version)" >> $GITHUB_OUTPUT
+
+  # Build job
+  build:
+    needs: [read_version]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 50
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ needs.read_version.outputs.flutter_version }}  # ADDED
+          channel: 'stable'
+          cache: true
+          pub-cache: true
+          cache-key: "flutter-:os:-:channel:-:version:-:arch:-:hash:"
+          pub-cache-key: flutter-pub-:os:-:channel:-:version:-:arch:-:hash:-${{ hashFiles('**/pubspec.lock') }}
+      - uses: bluefireteam/melos-action@v3
+      - name: Generate dart code
+        run: melos codegen --no-select
+      - name: Setup Pages
+        uses: actions/configure-pages@v6
+      - name: Build web app
+        run: melos build:storybook -- --base-href /${{ github.event.repository.name }}/
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: "packages/ui_components_lib/storybook/build/web"
+
+  # Deployment job
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

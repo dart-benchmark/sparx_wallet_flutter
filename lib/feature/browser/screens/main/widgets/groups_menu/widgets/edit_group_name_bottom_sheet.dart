@@ -1,0 +1,116 @@
+import 'package:app/core/wm/context_wm_mixin.dart';
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+const _groupNameSheetHeight = 530.0;
+
+Future<String?> showBrowserEditNameMenu(BuildContext context, String name) {
+  return showModalBottomSheet(
+    context: context,
+    barrierColor: Colors.transparent,
+    useRootNavigator: true,
+    isScrollControlled: true,
+    builder: (_) {
+      return SafeArea(child: EditGroupNameBottomSheet(name));
+    },
+  );
+}
+
+class EditGroupNameBottomSheet extends StatefulWidget {
+  const EditGroupNameBottomSheet(this.name, {super.key});
+
+  final String name;
+
+  @override
+  State<EditGroupNameBottomSheet> createState() =>
+      _EditGroupNameBottomSheetState();
+}
+
+class _EditGroupNameBottomSheetState extends State<EditGroupNameBottomSheet>
+    with ContextMixin {
+  late final _controller = TextEditingController(text: widget.name);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+    return SizedBox(
+      height: _groupNameSheetHeight,
+      child: PrimaryBottomSheetContainer(
+        backgroundColor: ColorsRes.n15,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: DimensSize.d24),
+          child: Column(
+            spacing: DimensSize.d16,
+            children: [
+              Text(
+                LocaleKeys.editName.tr(),
+                style: theme.textStyles.labelMedium,
+              ),
+              PrimaryTextField(
+                textEditingController: _controller,
+                isAutofocus: true,
+                borderFocusColor: ColorsRes.p65,
+                textStyle: theme.textStyles.paragraphMedium.copyWith(
+                  color: theme.colors.border2,
+                ),
+                cursorColor: theme.colors.border2,
+                cursorWidth: DimensSize.d1,
+                cursorHeight: DimensSize.d20,
+              ),
+              Flexible(
+                child: Row(
+                  spacing: DimensSize.d8,
+                  children: [
+                    Expanded(
+                      child: CustomButton(
+                        buttonShape: ButtonShape.pill,
+                        backgroundColor: ColorsRes.midnightBlue,
+                        title: LocaleKeys.backWord.tr(),
+                        onPressed: _onPressedBack,
+                      ),
+                    ),
+                    Expanded(
+                      child: CustomButton(
+                        buttonShape: ButtonShape.pill,
+                        backgroundColor: theme.colors.accent,
+                        title: LocaleKeys.save.tr(),
+                        onPressed: _onPressedSave,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _onPressedBack() {
+    final ctx = contextSafe;
+
+    if (ctx == null) {
+      return;
+    }
+
+    Navigator.of(ctx).pop();
+  }
+
+  void _onPressedSave() {
+    final ctx = contextSafe;
+
+    if (ctx == null) {
+      return;
+    }
+
+    Navigator.of(ctx).pop(_controller.text.isEmpty ? null : _controller.text);
+  }
+}

@@ -1,0 +1,108 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/wallet/new_account/add_account_confirm/add_account_confirm_wm.dart';
+import 'package:app/generated/generated.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class AddAccountConfirmWidget
+    extends
+        InjectedElementaryParametrizedWidget<
+          AddAccountConfirmWidgetModel,
+          AddAccountConfirmWmParams
+        > {
+  AddAccountConfirmWidget({
+    required PublicKey publicKey,
+    required String seedName,
+    super.key,
+  }) : super(
+         wmFactoryParam: AddAccountConfirmWmParams(
+           publicKey: publicKey,
+           seedName: seedName,
+         ),
+       );
+
+  @override
+  Widget build(AddAccountConfirmWidgetModel wm) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: DimensSize.d24),
+          decoration: BoxDecoration(
+            color: wm.theme.colors.background3,
+            borderRadius: BorderRadius.circular(DimensRadius.radius16),
+          ),
+          child: Row(
+            children: [
+              const SizedBox(width: DimensSize.d16),
+              Icon(
+                LucideIcons.lockKeyhole,
+                color: wm.theme.colors.content0,
+                size: DimensSize.d20,
+              ),
+              const SizedBox(width: DimensSize.d12),
+              Flexible(
+                child: Text(
+                  wm.seedName,
+                  style: wm.theme.textStyles.labelMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: DimensSize.d16),
+        SecureTextField(
+          textEditingController: wm.controller,
+          hintText: LocaleKeys.enterYourPassword.tr(),
+          isAutofocus: true,
+          onSubmit: (_) => wm.onPasswordSubmit(),
+        ),
+        const SizedBox(height: DimensSize.d28),
+        StateNotifierBuilder(
+          listenableState: wm.isPasswordLockedState,
+          builder: (_, isLocked) => AccentButton(
+            buttonShape: ButtonShape.pill,
+            title: LocaleKeys.confirm.tr(),
+            icon: (isLocked ?? false) ? LucideIcons.lock : null,
+            onPressed: wm.onPasswordSubmit,
+          ),
+        ),
+        StateNotifierBuilder(
+          listenableState: wm.availableBiometryState,
+          builder: (_, value) {
+            if (value?.contains(BiometricType.face) ?? false) {
+              return Padding(
+                padding: const EdgeInsets.only(top: DimensSize.d8),
+                child: PrimaryButton(
+                  buttonShape: ButtonShape.pill,
+                  title: LocaleKeys.useFaceID.tr(),
+                  icon: LucideIcons.scanFace,
+                  onPressed: wm.onUseBiometry,
+                ),
+              );
+            }
+
+            if (value?.isNotEmpty ?? false) {
+              return Padding(
+                padding: const EdgeInsets.only(top: DimensSize.d8),
+                child: PrimaryButton(
+                  buttonShape: ButtonShape.pill,
+                  title: LocaleKeys.useFingerprint.tr(),
+                  icon: LucideIcons.fingerprintPattern,
+                  onPressed: wm.onUseBiometry,
+                ),
+              );
+            }
+
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+}

@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+const defaultWordsToCheckAmount = 3;
+const defaultCheckAnswersAmount = 9;
+
+/// {@template check_seed_available_answers_widget}
+/// Widget that allows user to select answers for seed phrase checking.
+/// Widget displays list of available words for checking.
+/// {@endtemplate}
+class CheckSeedAvailableAnswersWidget extends StatelessWidget {
+  /// {@macro check_seed_available_answers_widget}
+  const CheckSeedAvailableAnswersWidget({
+    required this.availableAnswers,
+    required this.selectedAnswers,
+    required this.selectAnswer,
+    this.isEnabledWidget = true,
+    super.key,
+  });
+
+  /// List of available answers for checking.
+  final List<String> availableAnswers;
+
+  /// List of selected answers for checking (it will be hidden)
+  final List<String> selectedAnswers;
+
+  /// Callback that will be called when user tap on answer (it also can revert)
+  final ValueChanged<String> selectAnswer;
+  final bool isEnabledWidget;
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: isEnabledWidget ? Opac.opac100 : Opac.opac50,
+      child: IgnorePointer(
+        ignoring: !isEnabledWidget,
+        child: SeparatedColumn(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var index = 0; index < defaultWordsToCheckAmount; index++)
+              _answersRow(
+                availableAnswers.sublist(
+                  index * defaultWordsToCheckAmount,
+                  index * defaultWordsToCheckAmount + defaultWordsToCheckAmount,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _answersRow(List<String> answers) {
+    return SeparatedRow(children: answers.map(_answerBuilder).toList());
+  }
+
+  Widget _answerBuilder(String answer) {
+    final isSelected = selectedAnswers.contains(answer);
+
+    return Expanded(
+      child: AccentButton(
+        title: answer,
+        buttonShape: ButtonShape.pill,
+        buttonSize: .medium,
+        onPressed: isSelected ? null : () => selectAnswer(answer),
+      ),
+    );
+  }
+}

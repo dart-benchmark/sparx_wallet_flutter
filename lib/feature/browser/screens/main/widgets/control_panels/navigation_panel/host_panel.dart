@@ -1,0 +1,49 @@
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+const _hostPanelHeight = 62.0;
+
+class HostPanel extends StatelessWidget {
+  const HostPanel(this.uriState, {required this.onPressed, super.key});
+
+  static const height = _hostPanelHeight;
+
+  final ListenableState<Uri?> uriState;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return SizedBox(
+      height: height,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onPressed,
+        child: DecoratedBox(
+          decoration: BoxDecoration(color: theme.colors.background1),
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.all(DimensSize.d10),
+              child: StateNotifierBuilder<Uri?>(
+                listenableState: uriState,
+                builder: (_, Uri? uri) {
+                  return Text(
+                    uri?.host ?? '',
+                    style: theme.textStyles.labelMedium.copyWith(
+                      letterSpacing: -0.1,
+                      color: theme.colors.content3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

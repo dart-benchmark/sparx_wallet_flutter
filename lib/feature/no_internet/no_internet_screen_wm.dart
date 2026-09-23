@@ -1,0 +1,33 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:app/app/router/router.dart';
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/no_internet/no_internet_screen.dart';
+import 'package:app/feature/no_internet/no_internet_screen_model.dart';
+import 'package:app/feature/splash/route.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+/// [WidgetModel] для [NoInternetScreen]
+@injectable
+class NoInternetScreenWidgetModel
+    extends CustomWidgetModel<NoInternetScreen, NoInternetScreenModel> {
+  NoInternetScreenWidgetModel(super.model);
+
+  ThemeStyle get _theme => context.themeStyle;
+
+  TextStyles get textStyles => _theme.textStyles;
+
+  ColorsPalette get colors => _theme.colors;
+
+  Future<void> onPressedTryAgain() async {
+    final isExistInternet = await model.isExistInternet;
+
+    final ctx = contextSafe;
+
+    if (ctx != null && isExistInternet) {
+      contextSafe?.compassPoint(const SplashScreenRouteData());
+    }
+  }
+}

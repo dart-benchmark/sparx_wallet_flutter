@@ -1,0 +1,17 @@
+import 'package:app/feature/messenger/messenger.dart';
+import 'package:app/feature/wallet/new_account/screen/new_account_screen.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+
+/// [ElementaryModel] for [NewAccountScreen]
+@injectable
+class NewAccountScreenModel extends ElementaryModel {
+  NewAccountScreenModel(ErrorHandler errorHandler, this._messageService)
+    : super(errorHandler: errorHandler);
+
+  final MessengerService _messageService;
+
+  void showError(String message) {
+    _messageService.showError(message);
+  }
+}

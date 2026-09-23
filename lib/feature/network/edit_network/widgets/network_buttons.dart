@@ -1,0 +1,51 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class NetworkButtons extends StatelessWidget {
+  const NetworkButtons({
+    required this.saveEnabled,
+    required this.deleteEnabled,
+    required this.connection,
+    required this.onSave,
+    required this.onDelete,
+    super.key,
+  });
+
+  final bool saveEnabled;
+  final bool deleteEnabled;
+  final Connection? connection;
+  final VoidCallback onSave;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    final saveButtonText = connection == null
+        ? LocaleKeys.networkAdd.tr()
+        : LocaleKeys.networkSave.tr();
+
+    return ColoredBox(
+      color: theme.colors.background0,
+      child: SeparatedColumn(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (saveEnabled)
+            AccentButton(
+              buttonShape: ButtonShape.pill,
+              title: saveButtonText,
+              onPressed: onSave,
+            ),
+          if (deleteEnabled)
+            DestructiveButton(
+              buttonShape: ButtonShape.pill,
+              title: LocaleKeys.networkDelete.tr(),
+              onPressed: onDelete,
+            ),
+        ],
+      ),
+    );
+  }
+}

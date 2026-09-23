@@ -1,0 +1,110 @@
+import 'package:app/feature/ledger/ledger.dart';
+import 'package:app/utils/utils.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:money2/money2.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+import 'package:rxdart/rxdart.dart';
+
+@injectable
+class ConfirmMultisigTransactionModel extends ElementaryModel
+    with BleAvailabilityModelMixin {
+  ConfirmMultisigTransactionModel(
+    ErrorHandler errorHandler,
+    this._nekotonRepository,
+    this._ledgerService,
+    this._delegate,
+  ) : super(errorHandler: errorHandler);
+
+  final NekotonRepository _nekotonRepository;
+  final LedgerService _ledgerService;
+  final BleAvailabilityModelDelegate _delegate;
+
+  @override
+  BleAvailabilityModelDelegate get delegate => _delegate;
+
+  TransportStrategy get transport => _nekotonRepository.currentTransport;
+
+  KeyAccount? getAccount(Address address) =>
+      _nekotonRepository.seedList.findAccountByAddress(address);
+
+  SeedKey? getSeedKey(PublicKey publicKey) =>
+      _nekotonRepository.seedList.findSeedKey(publicKey);
+
+  Future<TonWalletState> getWalletState(Address address) => _nekotonRepository
+      .walletsMapStream
+      .mapNotNull((wallets) => wallets[address])
+      .first;
+
+  Future<BigInt> estimateFees({
+    required Address address,
+    required UnsignedMessage message,
+  }) => _nekotonRepository.estimateFees(address: address, message: message);
+
+  Future<List<TxTreeSimulationErrorItem>> simulateTransactionTree({
+    required Address address,
+    required UnsignedMessage message,
+  }) => _nekotonRepository.simulateTransactionTree(
+    address: address,
+    message: message,
+  );
+
+  Future<UnsignedMessage> prepareConfirmTransaction({
+    required Address address,
+    required PublicKey publicKey,
+    required String transactionId,
+  }) => _nekotonRepository.prepareConfirmTransaction(
+    address: address,
+    publicKey: publicKey,
+    transactionId: transactionId,
+    expiration: defaultSendTimeout,
+  );
+
+  Future<Future<Transaction>> sendMessage({
+    required Address address,
+    required Address destination,
+    required PublicKey publicKey,
+    required UnsignedMessage message,
+    required BigInt amount,
+    required SignInputAuth signInputAuth,
+  }) async {
+    final signatureContext = await transport.transport.getSignatureContext();
+    final signature = await _ledgerService.runWithLedgerIfKeyIsLedger(
+      interactionType: LedgerInteractionType.signTransaction,
+      publicKey: publicKey,
+      action: () async {
+        return _nekotonRepository.seedList.sign(
+          message: message.message,
+          publicKey: publicKey,
+          signInputAuth: signInputAuth,
+          signatureContext: signatureContext,
+        );
+      },
+    );
+
+    final signedMessage = await message.sign(signature: signature);
+
+    return _nekotonRepository.send(
+      address: address,
+      signedMessage: signedMessage,
+      amount: amount,
+      destination: repackAddress(destination),
+    );
+  }
+
+  SignInputAuthLedger getLedgerAuthInput({
+    required TonWallet wallet,
+    required Currency currency,
+  }) {
+    return SignInputAuthLedger(
+      wallet: wallet.walletType,
+      context: _ledgerService.prepareSignatureContext(
+        PrepareSignatureContext.confirm(
+          wallet: wallet,
+          asset: currency.symbol,
+          decimals: currency.decimalDigits,
+        ),
+      ),
+    );
+  }
+}

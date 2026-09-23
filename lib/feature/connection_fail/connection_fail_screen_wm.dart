@@ -1,0 +1,45 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/connection_fail/connection_fail_screen.dart';
+import 'package:app/feature/connection_fail/connection_fail_screen_model.dart';
+import 'package:app/feature/contact_support/contact_support.dart';
+import 'package:app/feature/network/network.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+/// [WidgetModel] для [ConnectionFailScreen]
+@injectable
+class ConnectionFailWidgetModel
+    extends CustomWidgetModel<ConnectionFailScreen, ConnectionFailModel> {
+  ConnectionFailWidgetModel(super.model);
+
+  ThemeStyle get _theme => context.themeStyle;
+
+  TextStyles get textStyles => _theme.textStyles;
+
+  ColorsPalette get colors => _theme.colors;
+
+  Future<void> onPressedTryAgain() async {
+    await model.tryAgain();
+  }
+
+  void onPressedContactUs() {
+    showContactSupportSheet(
+      context: context,
+      mode: ContactSupportMode.initiatedByCrash,
+    );
+  }
+
+  Future<void> onPressedChangeNetwork() async {
+    final selectedConnectionId = await showSelectNetworkSheet(
+      context: context,
+      showConfigureButton: false,
+    );
+
+    if (selectedConnectionId != null) {
+      await model.tryAgain();
+    }
+  }
+}

@@ -1,0 +1,140 @@
+// ignore_for_file: use_build_context_synchronously
+import 'dart:async';
+
+import 'package:app/app/router/router.dart';
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/wallet/widgets/wallet_backup/manual_backup/route.dart';
+import 'package:app/feature/wallet/widgets/wallet_backup/wallet_backup.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/utils/utils.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class ConfirmActionWmParams {
+  const ConfirmActionWmParams({required this.account});
+
+  final KeyAccount account;
+}
+
+@injectable
+class ConfirmActionWidgetModel
+    extends
+        CustomWidgetModelParametrized<
+          ContentConfirmAction,
+          ConfirmActionModel,
+          ConfirmActionWmParams
+        > {
+  ConfirmActionWidgetModel(super.model);
+
+  late final _lockState = model.getLockState(wmParams.value.account.publicKey);
+  late final _isPasswordLockedState = createNotifierFromStream(
+    _lockState.isLockedStream,
+  );
+
+  late final _availableBiometryState = createNotifier<List<BiometricType>>();
+
+  late final ValueListenable<KeyAccount?> accountState = createWmParamsNotifier(
+    (it) => it.account,
+  );
+
+  late final screenState = createEntityNotifier<ConfirmActionData>()
+    ..loading(ConfirmActionData());
+
+  late final passwordController = createTextEditingController();
+
+  ThemeStyle get themeStyle => context.themeStyle;
+
+  ListenableState<List<BiometricType>> get availableBiometryState =>
+      _availableBiometryState;
+
+  ListenableState<bool> get isPasswordLockedState => _isPasswordLockedState;
+
+  @override
+  void initWidgetModel() {
+    super.initWidgetModel();
+    passwordController.addListener(_resetError);
+    _getAvailableBiometry();
+  }
+
+  Future<void> onClickConfirm() async {
+    final publicKey = model.currentSeed?.publicKey;
+    final password = passwordController.text;
+    final languageCode = context.locale.languageCode;
+
+    if (publicKey == null) return;
+    if (_lockState.isLocked) {
+      _lockState.getErrorMessage(languageCode)?.let(model.showError);
+      return;
+    }
+
+    screenState.content(ConfirmActionData(isLoading: true));
+
+    final correct = await model.checkKeyPassword(
+      publicKey: publicKey,
+      password: password,
+    );
+
+    if (!correct) {
+      final errorMessage = _lockState.getErrorMessage(languageCode);
+      if (errorMessage != null) {
+        model.showError(errorMessage);
+        return;
+      }
+    }
+
+    await _export(publicKey, password);
+  }
+
+  Future<void> onUseBiometry() async {
+    final publicKey = model.currentSeed?.publicKey;
+    if (publicKey != null) {
+      final password = await model.requestBiometry(publicKey);
+
+      if (password != null) {
+        await _export(publicKey, password);
+      }
+    }
+  }
+
+  Future<void> _getAvailableBiometry() async {
+    final publicKey = model.currentSeed?.publicKey;
+    if (publicKey != null) {
+      final available = await model.getAvailableBiometry(publicKey);
+      _availableBiometryState.accept(available);
+    }
+  }
+
+  void _resetError() {
+    screenState.content(ConfirmActionData());
+  }
+
+  Future<void> _export(PublicKey publicKey, String password) async {
+    final seed = model.findSeed(publicKey);
+    if (seed != null) {
+      try {
+        final params = wmParams.value;
+        final phrase = await seed.export(password);
+        final address = params.account.address.address;
+
+        await context.compassBack();
+
+        context.compassContinue(
+          ManualBackupRouteData(
+            seedPhrase: await model.getSecurePhrase(phrase),
+            address: address,
+          ),
+        );
+      } catch (_) {
+        screenState.content(
+          ConfirmActionData(error: LocaleKeys.passwordIsWrong.tr()),
+        );
+      }
+    } else {
+      model.showValidateError(LocaleKeys.seedIsMissing.tr());
+    }
+  }
+}

@@ -1,0 +1,31 @@
+import 'package:app/data/models/browser_item.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:uuid/uuid.dart';
+
+part 'browser_history_item.freezed.dart';
+part 'browser_history_item.g.dart';
+
+@freezed
+abstract class BrowserHistoryItem
+    with _$BrowserHistoryItem
+    implements BrowserItem {
+  const factory BrowserHistoryItem({
+    /// The id of the tab.
+    required String id,
+    required String title,
+    required Uri url,
+    required DateTime visitTime,
+  }) = _BrowserHistoryItemDto;
+
+  factory BrowserHistoryItem.create({required Uri url}) => BrowserHistoryItem(
+    id: const Uuid().v4(),
+    title: url.host,
+    url: url,
+    visitTime: DateTime.now(),
+  );
+
+  const BrowserHistoryItem._();
+
+  factory BrowserHistoryItem.fromJson(Map<String, dynamic> json) =>
+      _$BrowserHistoryItemFromJson(json);
+}

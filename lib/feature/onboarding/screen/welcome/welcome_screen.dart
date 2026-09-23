@@ -1,0 +1,131 @@
+// ignore_for_file: invalid_use_of_visible_for_testing_member
+// ignore_for_file: invalid_use_of_protected_member
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/onboarding/screen/welcome/welcome_screen_wm.dart';
+import 'package:app/feature/onboarding/widgets/sliding_block_chains.dart';
+import 'package:app/generated/generated.dart';
+import 'package:flutter/gestures.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+/// Onboarding welcome screen
+class WelcomeScreen extends InjectedElementaryWidget<WelcomeScreenWidgetModel> {
+  const WelcomeScreen({super.key});
+
+  @override
+  Widget build(WelcomeScreenWidgetModel wm) {
+    final themeStyle = wm.themeStyle;
+
+    return Scaffold(
+      backgroundColor: themeStyle.colors.background0,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        minimum: EdgeInsets.only(bottom: DimensAdaptiveSize.d16.hp),
+        child: AdaptiveFooterSingleChildScrollView(
+          footer: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: DimensAdaptiveSize.d16.wp,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: DimensAdaptiveSize.d12.hp),
+                Center(
+                  child: Text(
+                    LocaleKeys.welcomeTitle.tr(),
+                    style: themeStyle.textStyles.displayMedium,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: DimensAdaptiveSize.d12.hp),
+                Center(
+                  child: Text(
+                    LocaleKeys.welcomeSubtitle.tr(),
+                    style: themeStyle.textStyles.paragraphMedium.copyWith(
+                      color: themeStyle.colors.content0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: DimensAdaptiveSize.d32.hp),
+                AccentButton(
+                  title: LocaleKeys.welcomeGetNewWallet.tr(),
+                  onPressed: wm.onPressedCreateWallet,
+                  buttonShape: ButtonShape.pill,
+                ),
+                SizedBox(height: DimensAdaptiveSize.d8.hp),
+                PrimaryButton(
+                  title: LocaleKeys.welcomeIHaveOne.tr(),
+                  onPressed: wm.onPressedWalletLogin,
+                  buttonShape: ButtonShape.pill,
+                ),
+                SizedBox(height: DimensAdaptiveSize.d12.hp),
+                Center(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: LocaleKeys.welcomeYouAccept.tr(),
+                          style: themeStyle.textStyles.paragraphXSmall.copyWith(
+                            color: themeStyle.colors.content3,
+                          ),
+                        ),
+                        TextSpan(
+                          text: LocaleKeys.welcomeLicenceAgreement.tr(),
+                          style: themeStyle.textStyles.paragraphXSmall.copyWith(
+                            color: themeStyle.colors.content0,
+                          ),
+                          recognizer: TapGestureRecognizer()
+                            ..onTap = wm.onLinkTap,
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(
+                    top: DimensSize.d12,
+                    bottom: DimensSize.d56,
+                    left: DimensSize.d16,
+                    right: DimensSize.d16,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      GhostButton(
+                        buttonShape: ButtonShape.pill,
+                        buttonSize: ButtonSize.small,
+                        icon: LucideIcons.globe,
+                        title: LocaleKeys.languageWord.tr(),
+                        onPressed: wm.onChangeLanguage,
+                      ),
+                      FloatButton(
+                        buttonShape: ButtonShape.circle,
+                        icon: LucideIcons.headset,
+                        onPressed: wm.onClickSupport,
+                        buttonSize: ButtonSize.medium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SlidingBlockChains(),
+              const SizedBox(height: DimensSize.d44),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

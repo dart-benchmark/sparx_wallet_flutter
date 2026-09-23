@@ -1,0 +1,58 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/feature/browser/data/tabs/browser_tab.dart';
+import 'package:injectable/injectable.dart';
+
+const _browserTabsDomain = 'browser_tabs';
+const browserTabsActiveTabIdKey = 'browser_tabs_active_tab_id_key';
+
+/// This is a wrapper-class above [StorageAdapter] that provides methods
+/// to interact with all browser tabs - related data.
+@singleton
+class BrowserTabsStorageService extends AbstractStorageService {
+  BrowserTabsStorageService(this._storageAdapter)
+    : _storage = _storageAdapter.box(_browserTabsDomain);
+
+  static const container = _browserTabsDomain;
+  static const browserTabsKey = 'browser_tabs_key';
+
+  final StorageAdapter _storageAdapter;
+  final StorageBox _storage;
+
+  /// Read active tab from storage
+  String? getActiveTabId() => _storage.read(browserTabsActiveTabIdKey);
+
+  /// Read list of browser tabs from storage
+  List<BrowserTab> getTabs() {
+    final list = _storage.read<List<dynamic>>(browserTabsKey);
+    if (list == null) {
+      return [];
+    }
+
+    return [
+      for (final entry in list)
+        BrowserTab.fromJson(entry as Map<String, dynamic>),
+    ];
+  }
+
+  /// Save active tab id to storage
+  void saveBrowserActiveTabId(String? id) {
+    _storage.write(browserTabsActiveTabIdKey, id);
+  }
+
+  /// Save list of browser tabs to storage
+  void saveBrowserTabs(List<BrowserTab> tabs) {
+    _storage.write(browserTabsKey, tabs.map((e) => e.toJson()).toList());
+  }
+
+  @override
+  Future<void> init() async {
+    await _storageAdapter.init(container);
+  }
+
+  @override
+  Future<void> clear() async {
+    try {
+      await _storage.erase();
+    } catch (_) {}
+  }
+}

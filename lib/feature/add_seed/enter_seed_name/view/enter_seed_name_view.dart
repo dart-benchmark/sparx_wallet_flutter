@@ -1,0 +1,100 @@
+import 'dart:async';
+
+import 'package:app/generated/generated.dart';
+import 'package:app/utils/constants.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+/// Callback to make any action after user entered seed phrase name.
+typedef EnterSeedNameCompleteCallback = FutureOr<void> Function(String? name);
+
+/// {@template enter_seed_name_view}
+/// Screen that allows user to enter name for seed phrase.
+/// Result name will be passed to [callback].
+/// {@endtemplate}
+class EnterSeedNameView extends StatefulWidget {
+  /// {@macro enter_seed_name_view}
+  const EnterSeedNameView({
+    required this.callback,
+    required this.isLoading,
+    super.key,
+  });
+
+  /// Callback that will be called when user entered seed phrase name.
+  final EnterSeedNameCompleteCallback callback;
+  final bool isLoading;
+
+  @override
+  State<EnterSeedNameView> createState() => _EnterSeedNameViewState();
+}
+
+class _EnterSeedNameViewState extends State<EnterSeedNameView> {
+  final nameController = TextEditingController();
+  final nameFocusNode = FocusNode();
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    nameFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(DimensSize.d16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Text(
+                      LocaleKeys.enterSeedNameScreenTitle.tr(),
+                      style: theme.textStyles.headingXLarge,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: DimensSize.d12),
+                    Text(
+                      LocaleKeys.enterSeedNameScreenDescription.tr(),
+                      style: theme.textStyles.paragraphMedium,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: DimensSize.d24),
+                    PrimaryTextField(
+                      isAutofocus: true,
+                      isEnabled: !widget.isLoading,
+                      focusNode: nameFocusNode,
+                      maxLength: maxLengthForMainEntities,
+                      textEditingController: nameController,
+                      hintText: LocaleKeys.seedName.tr(),
+                      onSubmit: (_) => _nextAction(),
+                    ),
+                    const SizedBox(height: DimensSize.d24),
+                  ],
+                ),
+              ),
+            ),
+            AccentButton(
+              isLoading: widget.isLoading,
+              buttonShape: ButtonShape.pill,
+              title: LocaleKeys.continueWord.tr(),
+              onPressed: _nextAction,
+            ),
+            const SizedBox(height: DimensSize.d12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _nextAction() {
+    final name = nameController.text.trim();
+    nameFocusNode.unfocus();
+    widget.callback(name.isEmpty ? null : name);
+  }
+}

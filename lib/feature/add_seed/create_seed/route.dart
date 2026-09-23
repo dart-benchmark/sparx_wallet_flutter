@@ -1,0 +1,43 @@
+import 'package:app/app/router/compass/compass.dart';
+import 'package:app/feature/add_seed/check_seed_phrase/route.dart';
+import 'package:app/feature/add_seed/create_password/route.dart';
+import 'package:app/feature/add_seed/create_seed/view/create_seed_screen.dart';
+import 'package:app/widgets/widgets.dart';
+import 'package:injectable/injectable.dart';
+
+const _seedNameQueryParam = 'seedName';
+
+/// Route that allows to create a seed phrase with/without entering name.
+@named
+@Singleton(as: CompassBaseRoute)
+class CreateSeedRoute extends CompassRoute<CreateSeedRouteData> {
+  CreateSeedRoute(
+    @Named.from(CheckSeedPhraseRoute) CompassBaseRoute checkSeedPhraseRoute,
+    @Named.from(CreateSeedPasswordRoute)
+    CompassBaseRoute createSeedPasswordRoute,
+  ) : super(
+        path: '/create-seed',
+        isSaveLocation: true,
+        compassBaseRoutes: [checkSeedPhraseRoute, createSeedPasswordRoute],
+        builder: (_, data, ___) =>
+            ProtectedContent(child: CreateSeedScreen(name: data.seedName)),
+      );
+
+  @override
+  CreateSeedRouteData fromQueryParams(Map<String, String> queryParams) {
+    return CreateSeedRouteData(seedName: queryParams[_seedNameQueryParam]);
+  }
+}
+
+class CreateSeedRouteData implements CompassRouteDataQuery {
+  const CreateSeedRouteData({required this.seedName});
+
+  final String? seedName;
+
+  @override
+  Map<String, String> toQueryParams() {
+    final seedName = this.seedName;
+
+    return {if (seedName != null) _seedNameQueryParam: seedName};
+  }
+}

@@ -1,0 +1,39 @@
+import 'package:app/app/router/compass/bottom_bar_state.dart';
+import 'package:app/app/router/compass/compass.dart';
+import 'package:app/feature/profile/account_detail/account_detail_page.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+
+/// Constants for query parameter names
+const _addressQueryParam = 'address';
+
+@named
+@Singleton(as: CompassBaseRoute)
+class AccountDetailRoute extends CompassRoute<AccountDetailRouteData> {
+  AccountDetailRoute()
+    : super(
+        path: '/account-detail',
+        isSaveLocation: true,
+        bottomBarState: BottomBarState.expanded,
+        builder: (context, data, _) => AccountDetailPage(address: data.address),
+      );
+
+  @override
+  AccountDetailRouteData fromQueryParams(Map<String, String> queryParams) {
+    final address = queryParams.require(_addressQueryParam);
+
+    return AccountDetailRouteData(address: Address(address: address));
+  }
+}
+
+class AccountDetailRouteData implements CompassRouteDataQuery {
+  const AccountDetailRouteData({required this.address});
+
+  /// Address of account
+  final Address address;
+
+  @override
+  Map<String, String> toQueryParams() {
+    return {_addressQueryParam: address.address};
+  }
+}

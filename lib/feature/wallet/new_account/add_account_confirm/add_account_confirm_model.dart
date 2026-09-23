@@ -1,0 +1,86 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/generated/generated.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+
+@injectable
+class AddAccountConfirmModel extends ElementaryModel {
+  AddAccountConfirmModel(
+    ErrorHandler errorHandler,
+    this._biometryService,
+    this._nekotonRepository,
+    this._currentAccountsService,
+    this._passwordService,
+  ) : super(errorHandler: errorHandler);
+
+  final BiometryService _biometryService;
+  final NekotonRepository _nekotonRepository;
+  final CurrentAccountsService _currentAccountsService;
+  final PasswordService _passwordService;
+
+  KeyAccount? get account => _currentAccountsService.currentActiveAccount;
+
+  PasswordLockState getLockState(PublicKey publicKey) =>
+      _passwordService.getLockState(publicKey);
+
+  Future<List<BiometricType>> getAvailableBiometry(PublicKey publicKey) async {
+    final seed = _nekotonRepository.seedList.findSeedByAnyPublicKey(publicKey);
+    if (seed == null) return [];
+
+    final isBiometryEnabled = _biometryService.isEnabled;
+    final hasKeyPassword = await _biometryService.hasKeyPassword(
+      seed.publicKey,
+    );
+
+    if (isBiometryEnabled && hasKeyPassword) {
+      return _biometryService.getAvailableBiometry();
+    }
+
+    return [];
+  }
+
+  Future<String?> requestBiometry(PublicKey publicKey) async {
+    final seed = _nekotonRepository.seedList.findSeedByAnyPublicKey(publicKey);
+    if (seed == null) return null;
+
+    try {
+      final password = await _biometryService.getKeyPassword(
+        publicKey: seed.publicKey,
+        localizedReason: LocaleKeys.biometryAuthReason.tr(),
+      );
+
+      return password;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> checkPassword({
+    required String password,
+    required PublicKey publicKey,
+  }) async {
+    if (password.isEmpty) return false;
+
+    final correct = await _passwordService.checkKeyPassword(
+      publicKey: publicKey,
+      password: password,
+      signatureContext: await _nekotonRepository.currentTransport.transport
+          .getSignatureContext(),
+    );
+
+    if (_biometryService.isEnabled && correct) {
+      await _biometryService.setKeyPassword(
+        publicKey: publicKey,
+        password: password,
+      );
+    }
+
+    return correct;
+  }
+
+  void showWrongPassword() => handleError(LocaleKeys.passwordIsWrong.tr());
+
+  void showError(String message) => handleError(message);
+}

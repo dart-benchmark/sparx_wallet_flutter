@@ -1,0 +1,37 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/qa/view/qa_model.dart';
+import 'package:app/feature/qa/view/qa_page.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:injectable/injectable.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+@injectable
+class QaWidgetModel extends CustomWidgetModel<QaSheet, QaModel> {
+  QaWidgetModel(super.model);
+
+  late final _keyState = createNotifier('');
+  late final _ivState = createNotifier('');
+
+  ThemeStyle get theme => context.themeStyle;
+
+  ListenableState<String> get ivState => _ivState;
+  ListenableState<String> get keyState => _keyState;
+
+  @override
+  Future<void> initWidgetModel() async {
+    super.initWidgetModel();
+
+    _ivState.accept(await model.readIv());
+    _keyState.accept(await model.readKey());
+  }
+
+  Future<void> clearEncryptedDb() async {
+    await model.clearEncryptedDb();
+    model.showSuccessMessage('Db dropped');
+  }
+
+  Future<void> clearEncryptedKeys() async {
+    await model.clearEncryptedKeys();
+    model.showSuccessMessage('Keys dropped');
+  }
+}

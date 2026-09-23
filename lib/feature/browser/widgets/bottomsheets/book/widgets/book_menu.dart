@@ -1,0 +1,236 @@
+import 'package:app/generated/generated.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+const _actionButtonWidth = 84.0;
+
+class BrowserBookmarksMenu extends StatelessWidget {
+  const BrowserBookmarksMenu({
+    required this.editState,
+    required this.activeState,
+    required this.onPressedEdit,
+    required this.onPressedDone,
+    super.key,
+  });
+
+  final ListenableState<bool> editState;
+  final ListenableState<bool> activeState;
+
+  final VoidCallback onPressedEdit;
+  final VoidCallback onPressedDone;
+
+  static const height = _Container._height;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Container(
+      child: Align(
+        alignment: Alignment.topRight,
+        child: StateNotifierBuilder(
+          listenableState: editState,
+          builder: (_, bool? editValue) {
+            editValue ??= false;
+            return AnimatedCrossFade(
+              firstChild: _DoneButton(onPressed: onPressedDone),
+              secondChild: StateNotifierBuilder(
+                listenableState: activeState,
+                builder: (_, bool? isActive) {
+                  return _EditButton(
+                    onPressed: isActive ?? false ? onPressedEdit : null,
+                  );
+                },
+              ),
+              crossFadeState: editValue
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              duration: const Duration(milliseconds: 250),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class HistoryBookmarksMenu extends StatelessWidget {
+  const HistoryBookmarksMenu({
+    required this.editState,
+    required this.activeEditState,
+    required this.activeClearState,
+    required this.onPressedEdit,
+    required this.onPressedDone,
+    required this.onPressedClear,
+    super.key,
+  });
+
+  final ListenableState<bool> editState;
+  final ListenableState<bool> activeEditState;
+  final ListenableState<bool> activeClearState;
+
+  final VoidCallback onPressedEdit;
+  final VoidCallback onPressedDone;
+  final VoidCallback onPressedClear;
+
+  static const height = _Container._height;
+
+  @override
+  Widget build(BuildContext context) {
+    return _Container(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _ClearButton(
+            activeState: activeClearState,
+            onPressed: onPressedClear,
+          ),
+          StateNotifierBuilder(
+            listenableState: editState,
+            builder: (_, bool? isEdited) {
+              isEdited ??= false;
+
+              return AnimatedCrossFade(
+                firstChild: _DoneButton(onPressed: onPressedDone),
+                secondChild: StateNotifierBuilder(
+                  listenableState: activeEditState,
+                  builder: (_, bool? isActive) {
+                    return _EditButton(
+                      onPressed: isActive ?? false ? onPressedEdit : null,
+                    );
+                  },
+                ),
+                crossFadeState: isEdited
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                duration: const Duration(milliseconds: 250),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Container extends StatelessWidget {
+  const _Container({required this.child});
+
+  final Widget child;
+
+  static const _height = 70.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.themeStyle.colors;
+
+    return SizedBox(
+      width: double.infinity,
+      height: _height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.background1,
+          border: Border(
+            top: BorderSide(color: colors.primaryA.withValues(alpha: .1)),
+          ),
+        ),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _EditButton extends StatelessWidget {
+  const _EditButton({this.onPressed});
+
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+    return _ActionButton(
+      text: LocaleKeys.edit.tr(),
+      textStyle: theme.textStyles.labelSmall.copyWith(
+        color: theme.colors.content2,
+      ),
+      onPressed: onPressed,
+    );
+  }
+}
+
+class _DoneButton extends StatelessWidget {
+  const _DoneButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+    return _ActionButton(
+      text: LocaleKeys.done.tr(),
+      textStyle: theme.textStyles.labelSmall.copyWith(
+        color: theme.colors.content2,
+      ),
+      onPressed: onPressed,
+    );
+  }
+}
+
+class _ClearButton extends StatelessWidget {
+  const _ClearButton({required this.activeState, this.onPressed});
+
+  final ListenableState<bool> activeState;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return StateNotifierBuilder(
+      listenableState: activeState,
+      builder: (_, bool? isActive) {
+        isActive ??= false;
+
+        return _ActionButton(
+          text: LocaleKeys.clearWord.tr(),
+          textStyle: theme.textStyles.labelSmall.copyWith(
+            color: ColorsRes.vibrantStrawberry,
+          ),
+          onPressed: isActive ? onPressed : null,
+        );
+      },
+    );
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  const _ActionButton({
+    required this.text,
+    required this.textStyle,
+    this.onPressed,
+  });
+
+  final String text;
+  final TextStyle textStyle;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: Opacity(
+        opacity: onPressed == null ? .4 : 1,
+        child: SizedBox(
+          width: _actionButtonWidth,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: DimensSize.d14),
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Text(text, style: textStyle),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}

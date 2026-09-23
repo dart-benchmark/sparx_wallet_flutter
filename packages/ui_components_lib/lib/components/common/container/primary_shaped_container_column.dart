@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class PrimaryShapedContainerColumn extends StatelessWidget {
+  const PrimaryShapedContainerColumn({
+    required this.children,
+    this.margin = EdgeInsets.zero,
+    this.padding = EdgeInsets.zero,
+    this.backgroundColor,
+    super.key,
+  });
+
+  final List<Widget> children;
+  final EdgeInsets margin;
+  final EdgeInsets padding;
+  final Color? backgroundColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return ShapedContainerColumn(
+      color: backgroundColor ?? context.themeStyle.colors.background2,
+      spacing: .5,
+      margin: margin,
+      padding: padding,
+      separator: const SizedBox(
+        width: double.infinity,
+        height: .5,
+        child: ColoredBox(color: ColorsRes.gray55),
+      ),
+      children: children,
+    );
+  }
+}
+
+class PrimaryShapedContainerItem extends StatelessWidget {
+  const PrimaryShapedContainerItem({
+    required this.title,
+    required this.icon,
+    required this.onPressed,
+    this.iconColor,
+    super.key,
+  });
+
+  final String title;
+  final IconData icon;
+  final Color? iconColor;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          vertical: DimensSize.d12,
+          horizontal: DimensSize.d16,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(title, style: context.themeStyle.textStyles.labelMedium),
+            Icon(icon, color: iconColor, size: DimensSize.d16),
+          ],
+        ),
+      ),
+    );
+  }
+}

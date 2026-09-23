@@ -1,0 +1,80 @@
+import 'package:app/app/router/router.dart';
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/ledger/ledger.dart';
+import 'package:app/feature/wallet/new_account/add_account/add_account_model.dart';
+import 'package:app/feature/wallet/new_account/add_account_confirm/add_new_account_confirm_sheet.dart';
+import 'package:app/feature/wallet/new_account/add_external_account/route.dart';
+import 'package:app/feature/wallet/new_account/screen/route.dart';
+import 'package:app/feature/wallet/new_account/select_seed/route.dart';
+import 'package:elementary/elementary.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+@injectable
+class AddAccountWidgetModel
+    extends CustomWidgetModel<ElementaryWidget, AddAccountModel>
+    with BleAvailabilityWmMixin {
+  AddAccountWidgetModel(super.model);
+
+  late final _currentAccountState = createNotifierFromStream(
+    model.currentAccount,
+  );
+  late final _listState = createNotifierFromStream(model.seedWithAccounts);
+
+  ListenableState<List<Seed>> get listState => _listState;
+
+  ListenableState<Seed?> get currentAccountState => _currentAccountState;
+
+  ThemeStyle get theme => context.themeStyle;
+
+  Future<void> onSelect() async {
+    if ((listState.value?.length ?? 0) > 1) {
+      contextSafe?.compassContinue(const SelectSeedRouteData());
+      return;
+    }
+
+    final seed = _currentAccountState.value;
+
+    if (contextSafe == null || seed == null) {
+      return;
+    }
+
+    if (seed.masterKey.isLegacy) {
+      contextSafe?.compassContinue(
+        NewAccountRouteData(publicKey: seed.publicKey.publicKey),
+      );
+      return;
+    }
+
+    if (seed.masterKey.isLedger) {
+      final isAvailable = await checkBluetoothAvailability();
+      if (!isAvailable) return;
+
+      contextSafe?.compassContinue(
+        NewAccountRouteData(publicKey: seed.publicKey.publicKey),
+      );
+      return;
+    }
+
+    final result = await showAddAccountConfirmSheet(
+      context: contextSafe!,
+      publicKey: seed.publicKey,
+      seedName: seed.name,
+    );
+
+    if (contextSafe != null && result != null) {
+      contextSafe?.compassContinue(
+        NewAccountRouteData(
+          publicKey: result.$1.publicKey,
+          password: await model.encryptSeed(result.$2),
+        ),
+      );
+    }
+  }
+
+  void onAddExternalAccount() {
+    contextSafe?.compassContinue(const NewExternalAccountRouteData());
+  }
+}

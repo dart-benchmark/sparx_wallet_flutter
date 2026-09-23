@@ -1,0 +1,73 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/profile/key_detail/widgets/add_new_external_account_sheet/add_new_external_account_sheet.dart';
+import 'package:app/feature/profile/key_detail/widgets/add_new_external_account_sheet/add_new_external_account_sheet_model.dart';
+import 'package:app/feature/wallet/new_account/add_account_result/add_account_result_sheet.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/utils/utils.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart'
+    show Address, PublicKey;
+
+@injectable
+class AddNewExternalAccountSheetWidgetModel
+    extends
+        CustomWidgetModelParametrized<
+          AddNewExternalAccountSheet,
+          AddNewExternalAccountSheetModel,
+          PublicKey
+        > {
+  AddNewExternalAccountSheetWidgetModel(super.model);
+
+  late final nameController = createTextEditingController();
+  late final addressController = createTextEditingController();
+  late final focusNode = createFocusNode();
+
+  late final _isLoadingState = createValueNotifier(false);
+
+  ValueListenable<bool> get isLoadingState => _isLoadingState;
+
+  void onPaste(String text) {
+    if (text.isEmpty) return;
+
+    final address = Address(address: text);
+    if (address.isValid) {
+      addressController.text = text;
+      focusNode.unfocus();
+    } else {
+      model.showError(LocaleKeys.addressIsWrong.tr());
+    }
+  }
+
+  Future<void> onSubmit([String? _]) async {
+    if (_isLoadingState.value) return;
+
+    final name = nameController.value.text.trim();
+    final address = Address(address: addressController.value.text);
+
+    try {
+      if (!address.isValid) {
+        model.showError(LocaleKeys.addressIsWrong.tr());
+        return;
+      }
+
+      _isLoadingState.value = true;
+
+      await model.addExternalAccount(
+        address: address,
+        publicKey: wmParams.value,
+        name: name.isEmpty ? null : name,
+      );
+
+      contextSafe?.let((context) {
+        Navigator.of(context).pop();
+        showNewAccountResultSheet(context: context, address: address);
+      });
+    } catch (e) {
+      model.showError(LocaleKeys.keyIsNotCustodian.tr());
+    } finally {
+      _isLoadingState.value = false;
+    }
+  }
+}

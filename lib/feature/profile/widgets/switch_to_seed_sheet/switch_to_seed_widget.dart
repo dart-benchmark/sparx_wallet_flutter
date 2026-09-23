@@ -1,0 +1,59 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/profile/widgets/switch_to_seed_sheet/switch_to_seed_wm.dart';
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class SwitchToSeedWidget
+    extends
+        InjectedElementaryParametrizedWidget<
+          SwitchToSeedWidgetModel,
+          PublicKey
+        > {
+  const SwitchToSeedWidget({required PublicKey publicKey, super.key})
+    : super(wmFactoryParam: publicKey);
+
+  @override
+  Widget build(SwitchToSeedWidgetModel wm) {
+    final theme = wm.theme;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(height: DimensSize.d24),
+        Image.asset(
+          Assets.images.checkCircleFill.checkCircleFill.path,
+          height: DimensSize.d56,
+          width: DimensSize.d56,
+        ),
+        const SizedBox(height: DimensSize.d16),
+        Text(
+          LocaleKeys.newSeedPhraseSwitchTitle.tr(),
+          style: theme.textStyles.headingLarge,
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: DimensSize.d8),
+        Text(
+          LocaleKeys.newSeedPhraseSwitchSubtitle.tr(),
+          style: theme.textStyles.paragraphMedium.copyWith(
+            color: theme.colors.content1,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: DimensSize.d24),
+        AccentButton(
+          buttonShape: ButtonShape.pill,
+          title: LocaleKeys.newSeedPhraseSwitchButton.tr(),
+          onPressed: wm.onSwitch,
+        ),
+        const SizedBox(height: DimensSize.d8),
+        PrimaryButton(
+          buttonShape: ButtonShape.pill,
+          title: LocaleKeys.accountAddedSheetContinue.tr(),
+          onPressed: wm.onContinue,
+        ),
+      ],
+    );
+  }
+}

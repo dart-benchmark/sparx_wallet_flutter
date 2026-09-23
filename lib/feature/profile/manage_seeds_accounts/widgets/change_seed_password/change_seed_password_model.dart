@@ -1,0 +1,60 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/feature/messenger/messenger.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+
+@injectable
+class ChangeSeedPasswordModel extends ElementaryModel {
+  ChangeSeedPasswordModel(
+    ErrorHandler errorHandler,
+    this._nekotonRepository,
+    this._biometryService,
+    this._messengerService,
+    this._passwordService,
+  ) : super(errorHandler: errorHandler);
+
+  final NekotonRepository _nekotonRepository;
+  final BiometryService _biometryService;
+  final MessengerService _messengerService;
+  final PasswordService _passwordService;
+
+  PasswordLockState getLockState(PublicKey publicKey) =>
+      _passwordService.getLockState(publicKey);
+
+  Future<void> changePassword({
+    required PublicKey publicKey,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final seed = _nekotonRepository.seedList.findSeed(publicKey);
+    if (seed == null) {
+      throw StateError('Seed not found for provided public key');
+    }
+
+    await seed.changePassword(
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
+
+    await _biometryService.setKeyPassword(
+      publicKey: publicKey,
+      password: newPassword,
+    );
+    await _passwordService.reset(publicKey);
+  }
+
+  Future<bool> checkKeyPassword({
+    required PublicKey publicKey,
+    required String password,
+  }) async => _passwordService.checkKeyPassword(
+    publicKey: publicKey,
+    password: password,
+    signatureContext: await _nekotonRepository.currentTransport.transport
+        .getSignatureContext(),
+  );
+
+  void showSuccessful(String text) => _messengerService.showSuccessful(text);
+
+  void showError(String text) => handleError(text);
+}

@@ -1,0 +1,61 @@
+name: ui_components_lib
+description: Library with UI components for nekoton projects
+version: 1.0.0+1
+publish_to: none
+resolution: workspace
+
+environment:
+  sdk: '>=3.11.0 <4.0.0'
+
+dependencies:
+  another_flushbar: ^2.2.4
+  collection: ^1.18.0
+  flutter:
+    sdk: flutter
+  flutter_form_builder: ^10.3.0+2
+  flutter_keyboard_visibility: ^6.0.0
+  flutter_screenutil: ^5.9.3
+  flutter_svg: ^2.3.0
+  form_builder_validators: ^11.3.0
+  lucide_icons_flutter: ^3.1.6
+  money2: ^6.0.5
+  sliding_up_panel2: ^3.3.0+1
+  smooth_sheets: 1.0.0
+
+
+dev_dependencies:
+  broxus_flutter_analysis:
+    git:
+      url: https://github.com/broxus/flutter_templates.git
+      ref: main
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+  generate: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: lib/fonts/Inter/static/Inter-Thin.ttf
+          weight: 100
+        - asset: lib/fonts/Inter/static/Inter-ExtraLight.ttf
+          weight: 200
+        - asset: lib/fonts/Inter/static/Inter-Light.ttf
+          weight: 300
+        - asset: lib/fonts/Inter/static/Inter-Regular.ttf
+          weight: 400
+        - asset: lib/fonts/Inter/static/Inter-Medium.ttf
+          weight: 500
+        - asset: lib/fonts/Inter/static/Inter-SemiBold.ttf
+          weight: 600
+        - asset: lib/fonts/Inter/static/Inter-Bold.ttf
+          weight: 700
+        - asset: lib/fonts/Inter/static/Inter-ExtraBold.ttf
+          weight: 800
+        - asset: lib/fonts/Inter/static/Inter-Black.ttf
+          weight: 900

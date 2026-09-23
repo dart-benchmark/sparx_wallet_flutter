@@ -1,0 +1,163 @@
+import 'package:app/app/router/compass/bottom_bar_state.dart';
+import 'package:app/app/router/compass/route.dart';
+import 'package:app/app/router/compass_error_redirect.dart';
+import 'package:app/core/sentry.dart';
+import 'package:flutter/widgets.dart';
+import 'package:go_router/go_router.dart';
+import 'package:logging/logging.dart';
+
+/// Base abstraction for creating GoRoute instances with default values.
+///
+/// This class serves as the foundation for route implementations in the Compass
+/// navigation system. It encapsulates the common behavior and properties needed
+/// to create GoRouter routes with strongly typed data.
+abstract class CompassBaseGoRoute<T extends CompassRouteData>
+    extends CompassBaseRoute {
+  CompassBaseGoRoute({
+    required this.path,
+    this.name,
+    this.builder,
+    this.pageBuilder,
+    this.isInitial = false,
+    this.isSaveLocation = false,
+    this.isSaveSubroutes = false,
+    this.bottomBarState = BottomBarState.collapsed,
+    super.isTopLevel,
+    this.routes = const <RouteBase>[],
+    this.redirect,
+    this.parentNavigatorKey,
+  });
+
+  static final _logger = Logger('CompassBaseGoRoute');
+
+  /// The runtime type of route data this route expects.
+  ///
+  /// This is used for type-safe route lookup in the router.
+  final Type routeDataType = T;
+
+  /// The name identifier for this route.
+  ///
+  /// This is used in the GoRouter configuration and for route lookup.
+  final String? name;
+
+  /// The URL path segment for this route.
+  ///
+  /// By default, this is just the route name prefixed with a slash,
+  /// but it can be customized through the constructor.
+  final String path;
+
+  /// Builder function for creating the route's widget.
+  ///
+  /// This function receives the context, route data, and GoRouter state
+  /// and should return the widget to display for this route.
+  final CompassWidgetBuilder<T>? builder;
+
+  /// Builder function for creating a custom navigation page.
+  ///
+  /// This allows for custom page transitions by providing a custom page
+  /// implementation instead of a simple widget.
+  final CompassPageBuilder<T>? pageBuilder;
+
+  /// Optional redirect function for conditional navigation.
+  ///
+  /// This follows the GoRouter redirect pattern and can be used to
+  /// implement navigation guards at the route level.
+  final GoRouterRedirect? redirect;
+
+  /// Optional navigator key for controlling which navigator stack
+  /// this route belongs to.
+  final GlobalKey<NavigatorState>? parentNavigatorKey;
+
+  /// Child routes that will be nested under this route.
+  final List<RouteBase> routes;
+
+  /// Whether this route is the initial route of the application.
+  ///
+  /// Only one route should have this flag set to true.
+  final bool isInitial;
+
+  /// Whether to save this route's location when navigating away.
+  ///
+  /// This is used for features like "return to previous location."
+  final bool isSaveLocation;
+
+  /// Whether to save this route's subroutes when navigating away.
+  ///
+  /// This is used to preserve nested navigation state.
+  final bool isSaveSubroutes;
+
+  /// Controls the bottom navigation bar state for this route.
+  ///
+  /// Defaults to [BottomBarState.collapsed]. Can be set to:
+  /// - [BottomBarState.expanded] to show the bottom bar
+  /// - [BottomBarState.collapsed] to show the bottom bar but collapsed
+  /// - [BottomBarState.hidden] to completely hide the bottom bar
+  final BottomBarState bottomBarState;
+
+  /// Converts route data to a URI location.
+  ///
+  /// This is used when navigating to this route with specific data.
+  /// Implementations define how route data is encoded in the URI.
+  Uri toLocation(T data);
+
+  /// Extracts route data from a GoRouter state.
+  ///
+  /// This is used when building the route's widget to provide it with
+  /// the correct data from the current navigation state.
+  T dataFromState(GoRouterState state);
+
+  @override
+  late final GoRoute route = GoRoute(
+    path: path,
+    name: name,
+    builder: builder != null ? _buildRouteWidget : null,
+    pageBuilder: pageBuilder != null ? _buildRoutePage : null,
+    redirect: redirect,
+    routes: routes,
+    parentNavigatorKey: parentNavigatorKey,
+  );
+
+  String get pathWithoutLeadingSlash => path.substring(1);
+
+  Widget _buildRouteWidget(BuildContext context, GoRouterState state) {
+    final data = _tryDataFromState(state);
+
+    if (data == null) {
+      final isOnboarding = state.fullPath?.startsWith('/onboarding') ?? false;
+      return CompassErrorRedirect(isOnboarding: isOnboarding);
+    }
+
+    return builder!(context, data, state);
+  }
+
+  Page<dynamic> _buildRoutePage(BuildContext context, GoRouterState state) {
+    final data = _tryDataFromState(state);
+
+    if (data == null) {
+      final isOnboarding = state.fullPath?.startsWith('/onboarding') ?? false;
+      return NoTransitionPage<void>(
+        key: state.pageKey,
+        name: state.name,
+        restorationId: state.pageKey.value,
+        child: CompassErrorRedirect(isOnboarding: isOnboarding),
+      );
+    }
+
+    return pageBuilder!(context, data, state);
+  }
+
+  T? _tryDataFromState(GoRouterState state) {
+    try {
+      return dataFromState(state);
+    } catch (error, stackTrace) {
+      _logger.severe(
+        'Error extracting route data for path: ${state.uri.path}',
+        error,
+        stackTrace,
+      );
+      SentryWorker.instance.captureException(error, stackTrace: stackTrace);
+    }
+
+    return null;
+  }
+}

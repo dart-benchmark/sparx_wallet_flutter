@@ -1,0 +1,1 @@
+export 'token_wallet_ordinary_transaction_details_screen.dart';

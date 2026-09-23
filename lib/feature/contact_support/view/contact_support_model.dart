@@ -1,0 +1,99 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/core/app_build_type.dart';
+import 'package:app/feature/contact_support/contact_support.dart';
+import 'package:app/feature/messenger/messenger.dart';
+import 'package:app/generated/generated.dart';
+import 'package:elementary/elementary.dart';
+import 'package:flutter_email_sender/flutter_email_sender.dart';
+import 'package:injectable/injectable.dart';
+import 'package:logging/logging.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:the_logger/the_logger.dart';
+
+@injectable
+class ContactSupportModel extends ElementaryModel {
+  ContactSupportModel(
+    ErrorHandler errorHandler,
+    this._ntpService,
+    this._appBuildType,
+  ) : super(errorHandler: errorHandler);
+
+  static final _logger = Logger('ContactSupportModel');
+
+  final NtpService _ntpService;
+  final AppBuildType _appBuildType;
+
+  bool get isQaEnabled => _appBuildType != AppBuildType.production;
+
+  Future<void> sendEmail(ContactSupportMode mode) async {
+    late final String logFilePath;
+    try {
+      logFilePath = await _contactSupportCreateLogfile();
+    } catch (e, s) {
+      _logger.severe(e, null, s);
+      handleError(LocaleKeys.contactSupportCantCreateFile.tr());
+      return;
+    }
+
+    try {
+      await _contactSupportEmailSend(mode, logFilePath);
+    } catch (e, s) {
+      _logger.severe(e, null, s);
+      handleError(
+        Message.error(
+          message: LocaleKeys.contactSupportCantFindEmailClient.tr(),
+          actionText: LocaleKeys.contactSupportCantFindEmailClientShare.tr(),
+          onAction: () => _contactSupportShareFile(logFilePath),
+        ),
+      );
+    }
+  }
+
+  Future<String> _contactSupportCreateLogfile() async {
+    final now = _ntpService.now().toLocal().toString().replaceAll(
+      RegExp(r'\s'),
+      '_',
+    );
+
+    return TheLogger.i().writeAllLogsToJson('sparx_logs_$now.json');
+  }
+
+  Future<void> _contactSupportEmailSend(
+    ContactSupportMode mode,
+    String logFilePath,
+  ) async {
+    final to = switch (mode) {
+      ContactSupportMode.initiatedByUser =>
+        LocaleKeys.contactSupportEmailToInitiatedByUser.tr(),
+      ContactSupportMode.initiatedByCrash =>
+        LocaleKeys.contactSupportEmailToInitiatedByUser.tr(),
+    };
+
+    final subject = switch (mode) {
+      ContactSupportMode.initiatedByUser =>
+        LocaleKeys.contactSupportEmailSubjectInitiatedByUser.tr(),
+      ContactSupportMode.initiatedByCrash =>
+        LocaleKeys.contactSupportEmailSubjectInitiatedByUser.tr(),
+    };
+
+    final body = switch (mode) {
+      ContactSupportMode.initiatedByUser =>
+        LocaleKeys.contactSupportEmailBodyInitiatedByUser.tr(),
+      ContactSupportMode.initiatedByCrash =>
+        LocaleKeys.contactSupportEmailBodyInitiatedByUser.tr(),
+    };
+
+    final email = Email(
+      subject: subject,
+      recipients: [to],
+      body: body,
+      attachmentPaths: [logFilePath],
+    );
+
+    await FlutterEmailSender.send(email);
+  }
+
+  Future<void> _contactSupportShareFile(String logFilePath) async {
+    await SharePlus.instance.share(ShareParams(files: [XFile(logFilePath)]));
+  }
+}

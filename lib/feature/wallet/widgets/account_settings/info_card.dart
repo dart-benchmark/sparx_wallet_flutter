@@ -1,0 +1,175 @@
+import 'package:app/di/di.dart';
+import 'package:app/feature/messenger/messenger.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/utils/utils.dart';
+import 'package:barcode_widget/barcode_widget.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class AccountSettingsInfoCard extends StatelessWidget {
+  const AccountSettingsInfoCard({
+    required this.account,
+    this.isShowingKey = true,
+    super.key,
+  });
+
+  final KeyAccount account;
+  final bool isShowingKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return PrimaryCard(
+      color: theme.colors.background2,
+      borderRadius: BorderRadius.circular(DimensRadius.radius16),
+      padding: EdgeInsets.zero,
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(DimensSize.d12),
+            child: Center(
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(DimensSize.d8),
+                  color: Colors.white,
+                ),
+                padding: const EdgeInsets.all(DimensSize.d8),
+                child: BarcodeWidget(
+                  width: DimensSize.d72,
+                  height: DimensSize.d72,
+                  data: account.address.address,
+                  barcode: Barcode.qrCode(),
+                  backgroundColor: Colors.white,
+                ),
+              ),
+            ),
+          ),
+          Flexible(
+            child: _Detail(account: account, isShowingKey: isShowingKey),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Detail extends StatelessWidget {
+  const _Detail({required this.account, required this.isShowingKey});
+
+  final KeyAccount account;
+  final bool isShowingKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(left: BorderSide(color: theme.colors.borderAlpha)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Flexible(
+            child: _Item(
+              titleText: LocaleKeys.addressWord.tr(),
+              descriptionText: account.address.address,
+              onPressed: () => _copyText(
+                context: context,
+                value: account.address.address,
+                label: account.address.toEllipseString(),
+              ),
+            ),
+          ),
+          if (isShowingKey)
+            Divider(
+              height: DimensStroke.small,
+              thickness: DimensStroke.small,
+              color: theme.colors.borderAlpha,
+            ),
+          if (isShowingKey)
+            Flexible(
+              child: _Item(
+                titleText: LocaleKeys.publicKey.tr(),
+                descriptionText: account.publicKey.publicKey,
+                onPressed: () => _copyText(
+                  context: context,
+                  value: account.publicKey.publicKey,
+                  label: account.publicKey.toEllipseString(),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _copyText({
+    required BuildContext context,
+    required String value,
+    required String label,
+  }) {
+    setClipBoardData(value);
+    inject<MessengerService>().show(
+      Message.successful(
+        message: LocaleKeys.valueCopiedExclamation.tr(args: [label]),
+      ),
+    );
+  }
+}
+
+class _Item extends StatelessWidget {
+  const _Item({
+    required this.titleText,
+    required this.descriptionText,
+    required this.onPressed,
+  });
+
+  final String titleText;
+  final String descriptionText;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return GestureDetector(
+      onTap: onPressed,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(DimensSize.d12),
+        child: SeparatedColumn(
+          spacing: DimensSize.d4,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              titleText,
+              style: theme.textStyles.labelXSmall.copyWith(
+                color: theme.colors.content3,
+              ),
+            ),
+            SeparatedRow(
+              spacing: DimensSize.d16,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    descriptionText,
+                    style: theme.textStyles.labelXSmall.copyWith(
+                      color: theme.colors.content0,
+                    ),
+                  ),
+                ),
+                const Icon(LucideIcons.copy, size: DimensSize.d20),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

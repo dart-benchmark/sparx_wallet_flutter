@@ -1,0 +1,37 @@
+import 'package:app/app/router/router.dart';
+import 'package:app/feature/onboarding/route.dart';
+import 'package:app/feature/wallet/route.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class CompassErrorRedirect extends StatefulWidget {
+  const CompassErrorRedirect({required this.isOnboarding, super.key});
+
+  final bool isOnboarding;
+
+  @override
+  State<CompassErrorRedirect> createState() => _CompassErrorRedirectState();
+}
+
+class _CompassErrorRedirectState extends State<CompassErrorRedirect> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+
+      if (widget.isOnboarding) {
+        context.compassPointNamed(const OnBoardingRouteData());
+      } else {
+        context.compassPointNamed(const WalletRouteData());
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(color: context.themeStyle.colors.background0),
+    );
+  }
+}

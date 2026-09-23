@@ -1,0 +1,51 @@
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class AccountSettingsButton extends StatelessWidget {
+  const AccountSettingsButton({
+    required this.label,
+    required this.onTap,
+    this.icon,
+    this.iconWidget,
+    this.color,
+    super.key,
+  });
+
+  final String label;
+  final IconData? icon;
+  final Widget? iconWidget;
+  final VoidCallback onTap;
+  final Color? color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: onTap,
+      child: Container(
+        height: DimensSize.d56,
+        padding: const EdgeInsets.symmetric(horizontal: DimensSize.d24),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: theme.textStyles.labelMedium.copyWith(
+                color: color ?? theme.colors.content0,
+              ),
+            ),
+            if (icon != null)
+              Icon(
+                icon,
+                size: DimensSize.d20,
+                color: color ?? theme.colors.content0,
+              ),
+            if (iconWidget != null) iconWidget!,
+          ],
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,45 @@
+import 'package:app/app/service/service.dart';
+import 'package:app/feature/messenger/messenger.dart';
+import 'package:app/utils/mixins/connection_mixin.dart';
+import 'package:elementary/elementary.dart';
+import 'package:flutter/material.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+
+@injectable
+class ImportWalletScreenModel extends ElementaryModel with ConnectionMixin {
+  ImportWalletScreenModel(
+    this.messengerService,
+    this.nekotonRepository,
+    this.networkConnectionService,
+    this._secureStringService,
+  );
+
+  @override
+  @protected
+  final MessengerService messengerService;
+
+  @override
+  @protected
+  final NetworkConnectionService networkConnectionService;
+
+  final NekotonRepository nekotonRepository;
+  final SecureStringService _secureStringService;
+
+  String get networkGroup => nekotonRepository.currentTransport.networkGroup;
+
+  NetworkType get networkType => nekotonRepository.currentTransport.networkType;
+
+  void showValidateError(String message) => handleError(message);
+
+  List<int> get allowedValues {
+    try {
+      return nekotonRepository.currentTransport.seedPhraseWordsCount;
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<SecureString> encryptSeed(String phrase) =>
+      _secureStringService.encrypt(phrase);
+}

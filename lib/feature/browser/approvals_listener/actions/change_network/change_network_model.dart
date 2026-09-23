@@ -1,0 +1,27 @@
+import 'package:app/app/service/service.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+
+const _timeLimit = Duration(seconds: 30);
+
+@injectable
+class ChangeNetworkModel extends ElementaryModel {
+  ChangeNetworkModel(
+    ErrorHandler errorHandler,
+    this._connectionsStorageService,
+    this._nekotonRepository,
+  ) : super(errorHandler: errorHandler);
+
+  final ConnectionsStorageService _connectionsStorageService;
+  final NekotonRepository _nekotonRepository;
+
+  Future<TransportStrategy> changeConnection(String id) async {
+    _connectionsStorageService.saveCurrentConnectionId(connectionId: id);
+    return _nekotonRepository.currentTransportStream
+        .firstWhere((strategy) => strategy.connectionId == id)
+        .timeout(_timeLimit);
+  }
+
+  void showError(Object data) => handleError(data);
+}

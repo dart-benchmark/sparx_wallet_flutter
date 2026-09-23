@@ -1,0 +1,196 @@
+import 'dart:async';
+
+import 'package:app/app/service/service.dart';
+import 'package:app/feature/ledger/ledger.dart';
+import 'package:app/feature/ton_connect/ton_connect.dart';
+import 'package:app/http/repository/repository.dart';
+import 'package:app/utils/utils.dart';
+import 'package:elementary/elementary.dart';
+import 'package:injectable/injectable.dart';
+import 'package:money2/money2.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+import 'package:rxdart/rxdart.dart';
+
+@injectable
+class TCSendMessageModel extends ElementaryModel
+    with BleAvailabilityModelMixin {
+  TCSendMessageModel(
+    ErrorHandler errorHandler,
+    this._nekotonRepository,
+    this._tonRepository,
+    this._ledgerService,
+    this._ntpService,
+    this._delegate,
+  ) : super(errorHandler: errorHandler);
+
+  final NekotonRepository _nekotonRepository;
+  final TonRepository _tonRepository;
+  final LedgerService _ledgerService;
+  final NtpService _ntpService;
+  final BleAvailabilityModelDelegate _delegate;
+
+  @override
+  BleAvailabilityModelDelegate get delegate => _delegate;
+
+  TransportStrategy get transport => _nekotonRepository.currentTransport;
+
+  Stream<Money> getBalanceStream(Address address) => _nekotonRepository
+      .walletsMapStream
+      .map((wallets) => wallets[address])
+      .mapNotNull((wallet) => wallet?.wallet?.contractState.balance)
+      .map(
+        (value) => Money.fromBigIntWithCurrency(
+          value,
+          Currencies()[transport.nativeTokenTicker]!,
+        ),
+      );
+
+  Future<TonWalletState> getTonWalletState(Address address) async {
+    final wallet = await _nekotonRepository.walletsMapStream
+        .mapNotNull((wallets) => wallets[address])
+        .first;
+    return wallet;
+  }
+
+  KeyAccount? getAccount(Address address) =>
+      _nekotonRepository.seedList.findAccountByAddress(address);
+
+  Future<List<PublicKey>?> getLocalCustodiansAsync(Address address) =>
+      _nekotonRepository.getLocalCustodiansAsync(address);
+
+  Future<UnsignedMessage> prepareTransfer({
+    required List<TransactionPayloadMessage> messages,
+    required Address address,
+    required int? validUntil,
+    PublicKey? publicKey,
+  }) => _nekotonRepository.prepareTransfer(
+    address: address,
+    publicKey: publicKey,
+    expiration: validUntil?.let(Expiration.timestamp) ?? defaultSendTimeout,
+    params: messages
+        .map(
+          (e) => TonWalletTransferParams(
+            amount: BigInt.parse(e.amount),
+            destination: e.address,
+            body: e.payload,
+            stateInit: e.stateInit,
+            bounce: e.address.isRaw
+                ? defaultMessageBounce
+                : e.address.isBounceable,
+          ),
+        )
+        .toList(),
+  );
+
+  Future<BigInt> estimateFees({
+    required Address address,
+    required UnsignedMessage message,
+  }) => _nekotonRepository.estimateFees(address: address, message: message);
+
+  Future<List<TxTreeSimulationErrorItem>> simulateTransactionTree({
+    required Address address,
+    required UnsignedMessage message,
+  }) => _nekotonRepository.simulateTransactionTree(
+    address: address,
+    message: message,
+  );
+
+  String? getSeedName(PublicKey custodian) =>
+      _nekotonRepository.seedList.findSeedKey(custodian)?.name;
+
+  Future<SignedMessage> send({
+    required List<TransactionPayloadMessage> messages,
+    required Address address,
+    required PublicKey publicKey,
+    required SignInputAuth signInputAuth,
+    required int? validUntil,
+  }) async {
+    UnsignedMessage? message;
+    try {
+      message = await prepareTransfer(
+        address: address,
+        publicKey: publicKey,
+        messages: messages,
+        validUntil: validUntil,
+      );
+
+      final transport = _nekotonRepository.currentTransport.transport;
+      final destination = messages.first.address;
+      final ampunt = messages.fold<BigInt>(
+        BigInt.zero,
+        (prev, e) => prev + BigInt.parse(e.amount),
+      );
+
+      final signatureContext = await transport.getSignatureContext();
+      final signature = await _ledgerService.runWithLedgerIfKeyIsLedger(
+        interactionType: LedgerInteractionType.signTransaction,
+        publicKey: publicKey,
+        action: () async {
+          return _nekotonRepository.seedList.sign(
+            message: message!.message,
+            publicKey: publicKey,
+            signInputAuth: signInputAuth,
+            signatureContext: signatureContext,
+          );
+        },
+      );
+
+      final signedMessage = await message.sign(signature: signature);
+
+      final now = _ntpService.now().secondsSinceEpoch;
+      if (signedMessage.expireAt.secondsSinceEpoch <= now) {
+        throw TimeoutException('Message has expired');
+      }
+
+      await _nekotonRepository.sendUnawaited(
+        address: address,
+        amount: ampunt,
+        destination: repackAddress(destination),
+        signedMessage: signedMessage,
+      );
+
+      return signedMessage;
+    } finally {
+      message?.dispose();
+    }
+  }
+
+  Future<(Address, JettonRootData)> getJettonRootDetails(Address address) =>
+      JettonWallet.getJettonRootDetailsFromJettonWallet(
+        address: address,
+        transport: transport.transport,
+      );
+
+  Future<Symbol> getSymbol(Address rootTokenContract) async {
+    final info = await _tonRepository.getTokenInfo(address: rootTokenContract);
+
+    final symbol = Symbol(
+      name: info.symbol ?? 'UNKNOWN',
+      fullName: info.name ?? 'Unknown token',
+      decimals: info.decimals ?? 0,
+      rootTokenContract: info.address,
+    );
+
+    return symbol;
+  }
+
+  Future<SignInputAuthLedger> getLedgerAuthInput({
+    required Address address,
+    required PublicKey custodian,
+    required Currency currency,
+  }) async {
+    final walletState = await getTonWalletState(address);
+
+    return SignInputAuthLedger(
+      wallet: walletState.wallet!.walletType,
+      context: _ledgerService.prepareSignatureContext(
+        PrepareSignatureContext.transfer(
+          wallet: walletState.wallet!,
+          asset: currency.symbol,
+          decimals: currency.decimalDigits,
+          custodian: custodian,
+        ),
+      ),
+    );
+  }
+}

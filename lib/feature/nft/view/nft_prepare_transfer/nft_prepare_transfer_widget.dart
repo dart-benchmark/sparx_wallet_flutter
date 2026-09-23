@@ -1,0 +1,302 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/nft/nft.dart';
+import 'package:app/feature/wallet/wallet.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/widgets/widgets.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart' hide Message;
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+class NftPrepareTransfer
+    extends
+        InjectedElementaryParametrizedWidget<
+          NftPrepareTransferWidgetModel,
+          NftPrepareTransferRouteData
+        > {
+  const NftPrepareTransfer({
+    required NftPrepareTransferRouteData routeData,
+    super.key,
+  }) : super(wmFactoryParam: routeData);
+
+  @override
+  Widget build(NftPrepareTransferWidgetModel wm) {
+    return Scaffold(
+      appBar: DefaultAppBar(titleText: LocaleKeys.nftTransferTitle.tr()),
+      body: EntityStateNotifierBuilder(
+        listenableEntityState: wm.dataState,
+        loadingBuilder: (_, __) => const Center(
+          child: Padding(
+            padding: EdgeInsets.all(DimensSize.d16),
+            child: CommonCircularProgressIndicator(
+              size: CircularIndicatorSize.large,
+            ),
+          ),
+        ),
+        errorBuilder: (_, Exception? error, __) {
+          return Center(child: WalletSubscribeErrorWidget(error: error ?? ''));
+        },
+        builder: (_, data) {
+          if (data == null) return const SizedBox.shrink();
+
+          final theme = wm.theme;
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: DimensSize.d16),
+            child: Form(
+              key: wm.formKey,
+              child: Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        spacing: DimensSize.d12,
+                        children: [
+                          if (!wm.tokenFlag) const _TokenFlag(),
+                          AccountInfo(account: data.account),
+                          _Item(item: data.item, collection: data.collection),
+                          if (data.localCustodians != null &&
+                              data.localCustodians!.length > 1)
+                            _SeedNamesDropdown(
+                              data: data,
+                              getSeedName: wm.getSeedName,
+                              onChangedCustodian: wm.onChangedCustodian,
+                            ),
+
+                          PrimaryTextField(
+                            labelText: LocaleKeys.toInputLabel.tr(),
+                            hintText: LocaleKeys.receiverAddress.tr(),
+                            textEditingController: wm.receiverController,
+                            isAutofocus: true,
+                            focusNode: wm.receiverFocus,
+                            onSubmit: wm.onSubmittedReceiverAddress,
+                            inputFormatters: [wm.addressFilterFormatter],
+                            validator: wm.validateAddressField,
+                            suffixes: [
+                              _ScanQRButton(
+                                receiver: wm.receiverController,
+                                onPressed: wm.onPressedScan,
+                              ),
+                              ClipboardPasteButton(
+                                value: wm.receiverController,
+                                onClear: wm.onPressedReceiverClear,
+                                onPaste: wm.onPressedPasteAddress,
+                              ),
+                            ],
+                          ),
+                          if (data.item.wallet != null && wm.tokenFlag)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              spacing: DimensSize.d6,
+                              children: [
+                                PrimaryTextField(
+                                  labelText: LocaleKeys.amountInputLabel.tr(),
+                                  hintText: LocaleKeys.amountInputHint.tr(),
+                                  textEditingController: wm.amountController,
+                                  focusNode: wm.amountFocus,
+                                  inputFormatters: [wm.amountFilterFormatter],
+                                  validator: wm.validateAmountField,
+                                  suffixes: [
+                                    _MaxButton(onPressed: wm.onMaxBalance),
+                                  ],
+                                  onSubmit: (_) => wm.onSubmit(),
+                                ),
+                                Text(
+                                  LocaleKeys.balance.tr(
+                                    args: [
+                                      data.item.wallet!.balance.toString(),
+                                    ],
+                                  ),
+                                  style: theme.textStyles.labelXSmall.copyWith(
+                                    color: theme.colors.content3,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: false,
+                                  maxLines: 1,
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  AccentButton(
+                    buttonShape: ButtonShape.pill,
+                    title: LocaleKeys.transfer.tr(),
+                    onPressed: wm.onSubmit,
+                  ),
+                  const SizedBox(height: DimensSize.d24),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _TokenFlag extends StatelessWidget {
+  const _TokenFlag();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: DimensSize.d4),
+      child: Text(
+        LocaleKeys.nftTransferDescription.tr(),
+        style: theme.textStyles.paragraphMedium.copyWith(
+          color: theme.colors.content1,
+        ),
+      ),
+    );
+  }
+}
+
+class _SeedNamesDropdown extends StatelessWidget {
+  const _SeedNamesDropdown({
+    required this.data,
+    required this.getSeedName,
+    required this.onChangedCustodian,
+  });
+
+  final NftPrepareTransferData data;
+  final String? Function(PublicKey pk) getSeedName;
+  final ValueChanged<PublicKey> onChangedCustodian;
+
+  @override
+  Widget build(BuildContext context) {
+    return CommonSelectDropdown<PublicKey>(
+      values: [
+        for (final c in data.localCustodians!)
+          CommonSheetDropdownItem<PublicKey>(
+            value: c,
+            title: getSeedName(c) ?? c.toEllipseString(),
+          ),
+      ],
+      titleText: LocaleKeys.custodianWord.tr(),
+      currentValue: data.custodian,
+      onChanged: onChangedCustodian,
+    );
+  }
+}
+
+class _ScanQRButton extends StatelessWidget {
+  const _ScanQRButton({required this.receiver, required this.onPressed});
+
+  final ValueNotifier<TextEditingValue> receiver;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return ValueListenableBuilder(
+      valueListenable: receiver,
+      builder: (_, value, ___) => value.text.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.only(right: DimensSize.d4),
+              child: PrimaryButton(
+                buttonShape: ButtonShape.square,
+                buttonSize: ButtonSize.small,
+                icon: LucideIcons.scan,
+                onPressed: onPressed,
+              ),
+            )
+          : const SizedBox.shrink(),
+    );
+  }
+}
+
+class _MaxButton extends StatelessWidget {
+  const _MaxButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: DimensSize.d4),
+      child: PrimaryButton(
+        title: LocaleKeys.maxWord.tr(),
+        buttonShape: ButtonShape.rectangle,
+        buttonSize: ButtonSize.small,
+        onPressed: onPressed,
+      ),
+    );
+  }
+}
+
+class _Item extends StatelessWidget {
+  const _Item({required this.item, required this.collection});
+
+  final NftItem item;
+  final NftCollection collection;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = context.themeStyle;
+    final balance = item.wallet?.balance;
+    final supply = item.nft.supply;
+
+    return ShapedContainerRow(
+      color: theme.colors.background1,
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DimensSize.d16,
+        vertical: DimensSize.d8,
+      ),
+      children: [
+        SizedBox(
+          width: DimensSize.d40,
+          height: DimensSize.d40,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(DimensRadius.radius20),
+            child: NftImage(imageUrl: item.nft.previewUrl),
+          ),
+        ),
+        Expanded(
+          child: Column(
+            spacing: DimensSize.d4,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                item.nft.name ?? LocaleKeys.unknown.tr(),
+                style: theme.textStyles.labelMedium,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                maxLines: 1,
+              ),
+              Text(
+                collection.name ?? LocaleKeys.unknown.tr(),
+                style: theme.textStyles.labelXSmall.copyWith(
+                  color: theme.colors.content3,
+                ),
+              ),
+            ],
+          ),
+        ),
+        if (balance != null && supply != null)
+          PrimaryCard(
+            padding: const EdgeInsets.symmetric(
+              horizontal: DimensSize.d4,
+              vertical: DimensSize.d2,
+            ),
+            color: theme.colors.background2,
+            borderRadius: BorderRadius.circular(DimensRadius.radius6),
+            child: Text(
+              '$balance/$supply',
+              style: theme.textStyles.labelXSmall,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              maxLines: 1,
+            ),
+          ),
+      ],
+    );
+  }
+}

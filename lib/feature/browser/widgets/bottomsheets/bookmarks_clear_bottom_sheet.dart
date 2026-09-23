@@ -1,0 +1,37 @@
+import 'package:app/generated/generated.dart';
+import 'package:flutter/material.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+Future<void> showBrowserClearBookmarksSheet({
+  required BuildContext context,
+  required VoidCallback onClearPressed,
+}) {
+  final theme = context.themeStyle;
+
+  return showCommonBottomSheet(
+    title: LocaleKeys.deleteBookmarksQuestion.tr(),
+    titleTextStyle: context.themeStyle.textStyles.headingLarge,
+    subtitle: LocaleKeys.deleteBookmarksDescription.tr(),
+    subtitleStyle: theme.textStyles.paragraphMedium.copyWith(
+      color: theme.colors.content3,
+    ),
+    centerTitle: true,
+    context: context,
+    titleMargin: const EdgeInsets.only(
+      top: DimensSize.d32,
+      bottom: DimensSize.d16,
+      left: DimensSize.d16,
+      right: DimensSize.d16,
+    ),
+    subtitleMargin: const EdgeInsets.only(bottom: DimensSize.d16),
+    centerSubtitle: true,
+    body: (BuildContext context, __) => PrimaryButton(
+      buttonShape: ButtonShape.pill,
+      title: LocaleKeys.yesDeleteAll.tr(),
+      onPressed: () {
+        onClearPressed();
+        Navigator.of(context).pop();
+      },
+    ),
+  );
+}

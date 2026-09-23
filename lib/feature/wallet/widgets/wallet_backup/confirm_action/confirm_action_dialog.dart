@@ -1,0 +1,109 @@
+import 'package:app/core/wm/custom_wm.dart';
+import 'package:app/feature/wallet/widgets/account_info.dart';
+import 'package:app/feature/wallet/widgets/wallet_backup/wallet_backup.dart';
+import 'package:app/generated/generated.dart';
+import 'package:app/widgets/widgets.dart';
+import 'package:elementary_helper/elementary_helper.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nekoton_repository/nekoton_repository.dart';
+import 'package:ui_components_lib/ui_components_lib.dart';
+
+Future<void> showConfirmActionDialog(
+  BuildContext context,
+  KeyAccount currentAccount,
+) {
+  return showPrimaryBottomSheet(
+    context: context,
+    content: ProtectedContent(
+      child: ContentConfirmAction(account: currentAccount),
+    ),
+  );
+}
+
+class ContentConfirmAction
+    extends
+        InjectedElementaryParametrizedWidget<
+          ConfirmActionWidgetModel,
+          ConfirmActionWmParams
+        > {
+  ContentConfirmAction({required KeyAccount account, super.key})
+    : super(wmFactoryParam: ConfirmActionWmParams(account: account));
+
+  @override
+  Widget build(ConfirmActionWidgetModel wm) {
+    final theme = wm.themeStyle;
+    return EntityStateNotifierBuilder<ConfirmActionData?>(
+      listenableEntityState: wm.screenState,
+      builder: (_, data) {
+        return Column(
+          children: [
+            Text(
+              LocaleKeys.confirmAction.tr(),
+              style: theme.textStyles.headingMedium,
+            ),
+            const SizedBox(height: DimensSize.d24),
+            ValueListenableBuilder(
+              valueListenable: wm.accountState,
+              builder: (_, account, __) => account != null
+                  ? AccountInfo(
+                      account: account,
+                      color: theme.colors.background2,
+                    )
+                  : const SizedBox.shrink(),
+            ),
+            const SizedBox(height: DimensSize.d16),
+            SecureTextField(
+              textEditingController: wm.passwordController,
+              validator: (_) => data?.error,
+              isAutofocus: true,
+              hintText: LocaleKeys.enterYourPassword.tr(),
+            ),
+            const SizedBox(height: DimensSize.d24),
+            StateNotifierBuilder(
+              listenableState: wm.isPasswordLockedState,
+              builder: (_, isLocked) => AccentButton(
+                buttonShape: ButtonShape.pill,
+                title: LocaleKeys.continueWord.tr(),
+                isLoading: data?.isLoading ?? false,
+                icon: (isLocked ?? false) ? LucideIcons.lock : null,
+                onPressed: wm.onClickConfirm,
+              ),
+            ),
+            StateNotifierBuilder(
+              listenableState: wm.availableBiometryState,
+              builder: (_, value) {
+                if (value?.contains(BiometricType.face) ?? false) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: DimensSize.d8),
+                    child: PrimaryButton(
+                      buttonShape: ButtonShape.pill,
+                      title: LocaleKeys.useFaceID.tr(),
+                      icon: LucideIcons.scanFace,
+                      onPressed: wm.onUseBiometry,
+                    ),
+                  );
+                }
+
+                if (value?.isNotEmpty ?? false) {
+                  return Padding(
+                    padding: const EdgeInsets.only(top: DimensSize.d8),
+                    child: PrimaryButton(
+                      buttonShape: ButtonShape.pill,
+                      title: LocaleKeys.useFingerprint.tr(),
+                      icon: LucideIcons.fingerprintPattern,
+                      onPressed: wm.onUseBiometry,
+                    ),
+                  );
+                }
+
+                return const SizedBox.shrink();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
