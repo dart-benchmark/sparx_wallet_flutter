@@ -94,7 +94,7 @@ dependencies:
   rxdart: 0.28.0
   sensitive_clipboard: ^1.2.0
   sentry_flutter: ^9.20.0
-  share_plus: ^13.1.0
+  share_plus: ^13.3.0
   shared_preferences: ^2.5.4
   sqlite3: ^3.3.1
   string_extensions: ^0.8.0
