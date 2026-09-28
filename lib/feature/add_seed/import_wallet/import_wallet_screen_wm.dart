@@ -52,6 +52,7 @@ class ImportWalletScreenWidgetModel
 
   final _log = Logger('ImportWalletWidgetModel');
   Set<String>? _hints;
+  String? _lastImportTag;
 
   String get networkGroup => model.networkGroup;
 
@@ -83,6 +84,13 @@ class ImportWalletScreenWidgetModel
 
       if (seed != null && seed.isNotEmpty) {
         final phrase = seed.phrase;
+
+        final importTag = await model.importReferenceTag(phrase);
+        if (importTag == _lastImportTag) {
+          return;
+        }
+        _lastImportTag = importTag;
+
         final encryptPhrase = await model.encryptSeed(phrase);
 
         deriveFromPhrase(phrase: phrase, mnemonicType: _mnemonicType);

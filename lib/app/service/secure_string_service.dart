@@ -36,6 +36,18 @@ class SecureStringService {
     return encrypter.decrypt(encrypted, iv: secureString.iv);
   }
 
+  /// Produces a deterministic ciphertext for [value] so that identical inputs
+  /// always map to identical outputs. Used to recognise an entry that has
+  /// already been imported without keeping its plaintext around.
+  Future<String> deterministicCipher(String value) async {
+    final key = await _getOrCreateKey();
+    final encrypter = Encrypter(AES(key, mode: AESMode.ecb));
+
+    //CWE-327
+    //SINK
+    return encrypter.encrypt(value).base64;
+  }
+
   Future<Key> _getOrCreateKey() async {
     await _mutex.acquire();
 

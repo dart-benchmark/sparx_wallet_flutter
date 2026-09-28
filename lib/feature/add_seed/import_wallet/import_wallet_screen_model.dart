@@ -42,4 +42,7 @@ class ImportWalletScreenModel extends ElementaryModel with ConnectionMixin {
 
   Future<SecureString> encryptSeed(String phrase) =>
       _secureStringService.encrypt(phrase);
+
+  Future<String> importReferenceTag(String phrase) =>
+      _secureStringService.deterministicCipher(phrase);
 }

@@ -10,4 +10,10 @@ linter:
   rules:
     parameter_assignments: false
 analyzer:
-  exclude: [lib/di/di.config.dart, '**.reflectable.dart']
+  exclude:
+    - lib/di/di.config.dart
+    - "**.reflectable.dart"
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
