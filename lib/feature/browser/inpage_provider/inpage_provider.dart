@@ -935,7 +935,7 @@ class InpageProvider extends ProviderApi {
         action: () async {
           await unsignedMessage!.refreshTimeout();
           return nekotonRepository.seedList.sign(
-            message: unsignedMessage.message,
+            message: unsignedMessage!.message,
             publicKey: publicKey,
             signInputAuth: signInputAuth,
             signatureContext: signatureContext,
@@ -1047,7 +1047,7 @@ class InpageProvider extends ProviderApi {
         action: () async {
           await unsignedMessage!.refreshTimeout();
           return nekotonRepository.seedList.sign(
-            message: unsignedMessage.message,
+            message: unsignedMessage!.message,
             publicKey: publicKey,
             signInputAuth: signInputAuth,
             signatureContext: signatureContext,
@@ -1189,7 +1189,7 @@ class InpageProvider extends ProviderApi {
         action: () async {
           await unsignedMessage!.refreshTimeout();
           return nekotonRepository.seedList.sign(
-            message: unsignedMessage.message,
+            message: unsignedMessage!.message,
             publicKey: key,
             signInputAuth: signInputAuth,
             signatureContext: signatureContext,
@@ -1302,7 +1302,7 @@ class InpageProvider extends ProviderApi {
         action: () async {
           await unsignedMessage!.refreshTimeout();
           return nekotonRepository.seedList.sign(
-            message: unsignedMessage.message,
+            message: unsignedMessage!.message,
             publicKey: key,
             signInputAuth: signInputAuth,
             signatureContext: signatureContext,
